@@ -10,8 +10,17 @@ import {
 } from 'react';
 
 import { getLevelFromRating } from '../constants/levels';
-import type { AnalysisSummary, PracticeRecord, PracticeRecordInput, UserProfile } from '../types';
+import type {
+  AnalysisSummary,
+  AppState,
+  LegacyStoredState,
+  PracticeRecord,
+  PracticeRecordInput,
+  UserProfile,
+} from '../types';
 
+const schemaVersion = 1;
+const appStateStorageKey = 'DartsSupportApp:appState';
 const profileStorageKey = 'DartsSupportApp:userProfile';
 const recordsStorageKey = 'DartsSupportApp:practiceRecords';
 
@@ -21,6 +30,9 @@ type AppStateContextValue = {
   records: PracticeRecord[];
   saveProfile: (profile: Omit<UserProfile, 'level'>) => Promise<void>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
+  updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
+  deletePracticeRecord: (id: string) => Promise<void>;
+  getRecordById: (id: string) => PracticeRecord | null;
   getWeeklyPracticeCount: () => number;
   getLatestRecord: () => PracticeRecord | null;
   getAnalysisSummary: () => AnalysisSummary;
@@ -38,7 +50,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
     async function loadStoredState() {
       try {
-        const [storedProfile, storedRecords] = await Promise.all([
+        const [storedAppState, storedProfile, storedRecords] = await Promise.all([
+          AsyncStorage.getItem(appStateStorageKey),
           AsyncStorage.getItem(profileStorageKey),
           AsyncStorage.getItem(recordsStorageKey),
         ]);
@@ -47,13 +60,16 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        if (storedProfile) {
-          setProfile(JSON.parse(storedProfile) as UserProfile);
-        }
+        const migratedState = migrateAppState(storedAppState, {
+          profile: storedProfile ? (JSON.parse(storedProfile) as UserProfile) : null,
+          records: storedRecords ? (JSON.parse(storedRecords) as PracticeRecord[]) : [],
+        });
 
-        if (storedRecords) {
-          const parsedRecords = JSON.parse(storedRecords) as PracticeRecord[];
-          setRecords(sortRecords(parsedRecords));
+        setProfile(migratedState.profile);
+        setRecords(sortRecords(migratedState.records));
+
+        if (!storedAppState) {
+          await persistAppState(migratedState.profile, migratedState.records);
         }
       } finally {
         if (mounted) {
@@ -69,15 +85,18 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const saveProfile = useCallback(async (profileInput: Omit<UserProfile, 'level'>) => {
-    const nextProfile: UserProfile = {
-      ...profileInput,
-      level: getLevelFromRating(profileInput.rating),
-    };
+  const saveProfile = useCallback(
+    async (profileInput: Omit<UserProfile, 'level'>) => {
+      const nextProfile: UserProfile = {
+        ...profileInput,
+        level: getLevelFromRating(profileInput.rating),
+      };
 
-    setProfile(nextProfile);
-    await AsyncStorage.setItem(profileStorageKey, JSON.stringify(nextProfile));
-  }, []);
+      setProfile(nextProfile);
+      await persistAppState(nextProfile, records);
+    },
+    [records],
+  );
 
   const addPracticeRecord = useCallback(
     async (recordInput: PracticeRecordInput) => {
@@ -89,8 +108,48 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
       const nextRecords = sortRecords([nextRecord, ...records]);
       setRecords(nextRecords);
-      await AsyncStorage.setItem(recordsStorageKey, JSON.stringify(nextRecords));
+      await persistAppState(profile, nextRecords);
     },
+    [profile, records],
+  );
+
+  const updatePracticeRecord = useCallback(
+    async (id: string, recordInput: PracticeRecordInput) => {
+      const currentRecord = records.find((record) => record.id === id);
+
+      if (!currentRecord) {
+        return;
+      }
+
+      const nextRecords = sortRecords(
+        records.map((record) =>
+          record.id === id
+            ? {
+                ...recordInput,
+                id,
+                date: currentRecord.date,
+              }
+            : record,
+        ),
+      );
+
+      setRecords(nextRecords);
+      await persistAppState(profile, nextRecords);
+    },
+    [profile, records],
+  );
+
+  const deletePracticeRecord = useCallback(
+    async (id: string) => {
+      const nextRecords = records.filter((record) => record.id !== id);
+      setRecords(nextRecords);
+      await persistAppState(profile, nextRecords);
+    },
+    [profile, records],
+  );
+
+  const getRecordById = useCallback(
+    (id: string) => records.find((record) => record.id === id) ?? null,
     [records],
   );
 
@@ -111,6 +170,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       records,
       saveProfile,
       addPracticeRecord,
+      updatePracticeRecord,
+      deletePracticeRecord,
+      getRecordById,
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
@@ -121,6 +183,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       records,
       saveProfile,
       addPracticeRecord,
+      updatePracticeRecord,
+      deletePracticeRecord,
+      getRecordById,
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
@@ -138,6 +203,45 @@ export function useAppState() {
   }
 
   return context;
+}
+
+async function persistAppState(profile: UserProfile | null, records: PracticeRecord[]) {
+  const appState: AppState = {
+    schemaVersion,
+    profile,
+    records: sortRecords(records),
+  };
+
+  await AsyncStorage.setItem(appStateStorageKey, JSON.stringify(appState));
+}
+
+export function migrateAppState(
+  storedAppState: string | null,
+  legacyState: LegacyStoredState,
+): AppState {
+  if (!storedAppState) {
+    return {
+      schemaVersion,
+      profile: legacyState.profile,
+      records: sortRecords(legacyState.records),
+    };
+  }
+
+  const parsedState = JSON.parse(storedAppState) as Partial<AppState>;
+
+  if (parsedState.schemaVersion === schemaVersion) {
+    return {
+      schemaVersion,
+      profile: parsedState.profile ?? null,
+      records: sortRecords(parsedState.records ?? []),
+    };
+  }
+
+  return {
+    schemaVersion,
+    profile: parsedState.profile ?? legacyState.profile,
+    records: sortRecords(parsedState.records ?? legacyState.records),
+  };
 }
 
 function sortRecords(records: PracticeRecord[]) {

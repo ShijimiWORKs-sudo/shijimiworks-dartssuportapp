@@ -39,6 +39,17 @@ export type PracticeRecord = {
 
 export type PracticeRecordInput = Omit<PracticeRecord, 'id' | 'date'>;
 
+export type AppState = {
+  schemaVersion: 1;
+  profile: UserProfile | null;
+  records: PracticeRecord[];
+};
+
+export type LegacyStoredState = {
+  profile: UserProfile | null;
+  records: PracticeRecord[];
+};
+
 export type AnalysisSummary = {
   practiceCount: number;
   countUpAverageScore: number | null;

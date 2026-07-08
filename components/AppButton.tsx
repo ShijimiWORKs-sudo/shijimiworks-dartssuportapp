@@ -5,7 +5,7 @@ import { colors } from '../constants/theme';
 type AppButtonProps = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger';
 };
 
 export function AppButton({ label, onPress, variant = 'primary' }: AppButtonProps) {
@@ -16,6 +16,7 @@ export function AppButton({ label, onPress, variant = 'primary' }: AppButtonProp
       style={({ pressed }) => [
         styles.button,
         variant === 'secondary' && styles.secondary,
+        variant === 'danger' && styles.danger,
         pressed && styles.pressed,
       ]}
     >
@@ -36,6 +37,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  danger: {
+    backgroundColor: colors.danger,
   },
   pressed: {
     opacity: 0.78,

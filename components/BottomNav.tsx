@@ -6,7 +6,7 @@ import { colors } from '../constants/theme';
 const tabs = [
   { href: '/home', label: 'ホーム' },
   { href: '/practice', label: '練習' },
-  { href: '/record', label: '記録' },
+  { href: '/records', label: '記録' },
   { href: '/analysis', label: '分析' },
   { href: '/consult', label: '相談' },
 ] as const;
@@ -18,7 +18,8 @@ export function BottomNav() {
   return (
     <View style={styles.nav}>
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        const active =
+          pathname === tab.href || (tab.href === '/records' && pathname.startsWith('/records'));
 
         return (
           <Pressable

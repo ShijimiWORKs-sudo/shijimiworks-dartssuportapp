@@ -16,10 +16,11 @@ const logo = require('../assets/images/logo.png');
 
 const menuLinks = [
   { label: '今日の練習', href: '/practice', helper: 'レベル別メニュー' },
-  { label: '練習記録', href: '/record', helper: 'スコアと感覚を残す' },
+  { label: '練習記録', href: '/records', helper: '一覧・詳細・編集' },
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
   { label: 'フォーム相談', href: '/consult', helper: '固定アドバイス確認' },
   { label: '資料ライブラリ', href: '/library', helper: '仮の記事カード' },
+  { label: '設定を編集', href: '/settings', helper: 'RTと悩みを更新' },
 ] as const;
 
 export default function HomeScreen() {
@@ -85,10 +86,14 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      <Card>
-        <SectionTitle title="最新の練習記録" />
-        {latestRecord ? (
-          <>
+      {latestRecord ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/records/${latestRecord.id}`)}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Card>
+            <SectionTitle title="最新の練習記録" subtitle="タップで詳細を開きます。" />
             <Text style={styles.latestTitle}>{latestRecord.practiceMenuName}</Text>
             <Text style={styles.latestBody}>
               {formatDate(latestRecord.date)} / {gameLabels[latestRecord.gameType]} / スコア{' '}
@@ -98,13 +103,16 @@ export default function HomeScreen() {
               Bull {latestRecord.bullCount} / Cricket {latestRecord.cricketMarks} /{' '}
               {conditionLabels[latestRecord.condition]}
             </Text>
-          </>
-        ) : (
+          </Card>
+        </Pressable>
+      ) : (
+        <Card>
+          <SectionTitle title="最新の練習記録" />
           <Text style={styles.latestBody}>
             まだ練習記録がありません。記録入力から1件保存しましょう。
           </Text>
-        )}
-      </Card>
+        </Card>
+      )}
 
       <SectionTitle title="主要メニュー" />
       <View style={styles.menuGrid}>

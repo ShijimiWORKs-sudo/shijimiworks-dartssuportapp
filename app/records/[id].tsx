@@ -1,0 +1,127 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+
+import { AppButton } from '../../components/AppButton';
+import { Card } from '../../components/Card';
+import { ScreenShell } from '../../components/ScreenShell';
+import { SectionTitle } from '../../components/SectionTitle';
+import { conditionLabels, gameLabels, machineLabels } from '../../constants/labels';
+import { colors } from '../../constants/theme';
+import { useAppState } from '../../contexts/AppStateContext';
+
+export default function RecordDetailScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { deletePracticeRecord, getRecordById } = useAppState();
+  const record = id ? getRecordById(id) : null;
+
+  const handleDelete = () => {
+    if (!record) {
+      return;
+    }
+
+    Alert.alert('練習記録を削除しますか？', 'この操作は取り消せません。', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '削除',
+        style: 'destructive',
+        onPress: () => {
+          void deletePracticeRecord(record.id).then(() => router.replace('/records'));
+        },
+      },
+    ]);
+  };
+
+  if (!record) {
+    return (
+      <ScreenShell>
+        <SectionTitle title="記録が見つかりません" subtitle="一覧からもう一度選択してください。" />
+        <AppButton label="一覧へ戻る" onPress={() => router.replace('/records')} />
+      </ScreenShell>
+    );
+  }
+
+  return (
+    <ScreenShell>
+      <SectionTitle title="練習記録詳細" subtitle={formatDate(record.date)} />
+
+      <Card>
+        <Text style={styles.title}>{record.practiceMenuName}</Text>
+        <DetailRow label="機種" value={machineLabels[record.machineType]} />
+        <DetailRow label="ゲーム種別" value={gameLabels[record.gameType]} />
+        <DetailRow label="スコア" value={String(record.score)} />
+        <DetailRow label="ブル数" value={String(record.bullCount)} />
+        <DetailRow label="クリケットマーク数" value={String(record.cricketMarks)} />
+        <DetailRow label="調子" value={conditionLabels[record.condition]} />
+        <View style={styles.memoBlock}>
+          <Text style={styles.label}>メモ</Text>
+          <Text style={styles.memo}>{record.memo || 'メモはありません。'}</Text>
+        </View>
+      </Card>
+
+      <AppButton label="編集" onPress={() => router.push(`/records/${record.id}/edit`)} />
+      <AppButton label="削除" onPress={handleDelete} variant="danger" />
+      <AppButton label="分析へ戻る" onPress={() => router.push('/analysis')} variant="secondary" />
+      <AppButton label="一覧へ戻る" onPress={() => router.push('/records')} variant="secondary" />
+    </ScreenShell>
+  );
+}
+
+type DetailRowProps = {
+  label: string;
+  value: string;
+};
+
+function DetailRow({ label, value }: DetailRowProps) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
+const styles = StyleSheet.create({
+  title: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+    marginTop: 16,
+  },
+  label: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  value: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  memoBlock: {
+    marginTop: 18,
+    gap: 8,
+  },
+  memo: {
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+});

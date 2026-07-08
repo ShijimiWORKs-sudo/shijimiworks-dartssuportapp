@@ -13,6 +13,7 @@ export default function AnalysisScreen() {
   const router = useRouter();
   const { getAnalysisSummary } = useAppState();
   const summary = getAnalysisSummary();
+  const latestRecord = summary.latestRecord;
 
   if (summary.practiceCount === 0) {
     return (
@@ -25,6 +26,11 @@ export default function AnalysisScreen() {
           </Text>
         </Card>
         <AppButton label="練習記録を入力する" onPress={() => router.push('/record')} />
+        <AppButton
+          label="記録一覧を見る"
+          onPress={() => router.push('/records')}
+          variant="secondary"
+        />
       </ScreenShell>
     );
   }
@@ -81,6 +87,17 @@ export default function AnalysisScreen() {
         <Text style={styles.nextPractice}>{summary.nextPracticeTitle}</Text>
         <Text style={styles.bodyText}>保存データをもとにした固定ロジックのおすすめです。</Text>
       </Card>
+      <AppButton
+        label="記録一覧を見る"
+        onPress={() => router.push('/records')}
+        variant="secondary"
+      />
+      {latestRecord ? (
+        <AppButton
+          label="直近練習記録を開く"
+          onPress={() => router.push(`/records/${latestRecord.id}`)}
+        />
+      ) : null}
     </ScreenShell>
   );
 }
