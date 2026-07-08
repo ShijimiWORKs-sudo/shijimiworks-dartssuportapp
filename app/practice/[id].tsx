@@ -6,6 +6,7 @@ import { Card } from '../../components/Card';
 import { ScreenShell } from '../../components/ScreenShell';
 import { SectionTitle } from '../../components/SectionTitle';
 import { conditionLabels, gameLabels, machineLabels } from '../../constants/labels';
+import { getKnowledgeArticlesByPracticeMenuId } from '../../constants/knowledgeBase';
 import { levelLabels } from '../../constants/levels';
 import { getPracticeMenuById } from '../../constants/practiceMenus';
 import { colors } from '../../constants/theme';
@@ -20,6 +21,7 @@ export default function PracticeMenuDetailScreen() {
   const menu = id ? getPracticeMenuById(id) : null;
   const menuRecords = menu ? getRecordsByPracticeMenuId(menu.id) : [];
   const latestRecord = menuRecords[0] ?? null;
+  const relatedArticles = menu ? getKnowledgeArticlesByPracticeMenuId(menu.id) : [];
 
   if (!menu) {
     return (
@@ -82,6 +84,23 @@ export default function PracticeMenuDetailScreen() {
           ))}
         </View>
       </Card>
+
+      {relatedArticles.length ? (
+        <>
+          <SectionTitle title="関連資料" />
+          {relatedArticles.map((article) => (
+            <Pressable
+              key={article.id}
+              accessibilityRole="button"
+              onPress={() => router.push(`/library/${article.id}`)}
+              style={({ pressed }) => [styles.articleCard, pressed && styles.pressed]}
+            >
+              <Text style={styles.cardTitle}>{article.title}</Text>
+              <Text style={styles.bodyText}>{article.summary}</Text>
+            </Pressable>
+          ))}
+        </>
+      ) : null}
 
       <Card muted>
         <Text style={styles.cardTitle}>この練習の記録履歴</Text>
@@ -282,6 +301,13 @@ const styles = StyleSheet.create({
   },
   recordMiniCard: {
     padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  articleCard: {
+    padding: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,

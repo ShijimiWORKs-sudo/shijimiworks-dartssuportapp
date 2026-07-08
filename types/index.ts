@@ -6,6 +6,21 @@ export type PracticeGame = 'COUNT-UP' | '01' | 'CRICKET' | 'OTHER';
 
 export type Condition = 'good' | 'normal' | 'bad';
 
+export type ConsultCategory =
+  | 'stance'
+  | 'grip'
+  | 'takeback'
+  | 'release'
+  | 'followThrough'
+  | 'aiming'
+  | 'rhythm'
+  | 'mental'
+  | 'yips'
+  | 'practicePlan'
+  | 'other';
+
+export type ConsultSeverity = 'light' | 'normal' | 'serious';
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -89,4 +104,41 @@ export type LibraryCategory = {
     title: string;
     summary: string;
   }[];
+};
+
+export type ConsultAdvice = {
+  id: string;
+  category: ConsultCategory;
+  title: string;
+  problemKeywords: string[];
+  symptoms: string[];
+  possibleCauses: string[];
+  adviceSummary: string;
+  checkPoints: string[];
+  recommendedPracticeMenuIds: string[];
+  relatedKnowledgeIds: string[];
+  cautionText?: string;
+  severity?: ConsultSeverity;
+};
+
+export type KnowledgeArticle = {
+  id: string;
+  category: string;
+  title: string;
+  summary: string;
+  body: string;
+  tags: string[];
+  relatedPracticeMenuIds: string[];
+  relatedAdviceIds: string[];
+  sourceNotes?: string[];
+};
+
+export type ConsultHistory = {
+  id: string;
+  date: string;
+  category: ConsultCategory;
+  userText: string;
+  resultAdviceIds: string[];
+  selectedPracticeMenuIds: string[];
+  memo: string;
 };
