@@ -21,9 +21,6 @@
     "web": {
       "favicon": "./assets/images/logo.png"
     },
-    "plugins": ["expo-router"],
-    "experiments": {
-      "typedRoutes": true
-    }
+    "plugins": ["expo-router"]
   }
 }
