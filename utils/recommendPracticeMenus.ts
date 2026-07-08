@@ -1,63 +1,64 @@
 import { matchesMachine, practiceMenus } from '../constants/practiceMenus';
 import type { DartMachine, PracticeMenu, PracticeRecord, UserProfile } from '../types';
 
+export type RecommendedPracticeMenu = {
+  menu: PracticeMenu;
+  reason: string;
+};
+
 export type PracticeRecommendation = {
-  todayMenus: PracticeMenu[];
-  supportMenus: PracticeMenu[];
+  todayMenus: RecommendedPracticeMenu[];
+  supportMenus: RecommendedPracticeMenu[];
   reasonText: string;
+};
+
+type RecommendationContext = {
+  profile: UserProfile | null;
+  machineType: DartMachine;
+  weeklyCount: number;
+  averageBullCount: number;
+  hasFewCricketRecords: boolean;
+  hasFewCountUpRecords: boolean;
 };
 
 export function recommendPracticeMenus(
   profile: UserProfile | null,
   records: PracticeRecord[],
 ): PracticeRecommendation {
-  const machineType: DartMachine = profile?.machineType ?? 'BOTH';
-  const weeklyCount = getWeeklyPracticeCount(records);
-  const averageBullCount = average(records.map((record) => record.bullCount));
-  const hasFewCricketRecords = records.filter((record) => record.gameType === 'CRICKET').length < 2;
-  const hasFewCountUpRecords =
-    records.filter((record) => record.gameType === 'COUNT-UP').length < 2;
+  const context: RecommendationContext = {
+    profile,
+    machineType: profile?.machineType ?? 'BOTH',
+    weeklyCount: getWeeklyPracticeCount(records),
+    averageBullCount: average(records.map((record) => record.bullCount)),
+    hasFewCricketRecords: records.filter((record) => record.gameType === 'CRICKET').length < 2,
+    hasFewCountUpRecords: records.filter((record) => record.gameType === 'COUNT-UP').length < 2,
+  };
 
   const scoredMenus = practiceMenus
     .map((menu) => ({
       menu,
-      score: scorePracticeMenu(menu, {
-        profile,
-        machineType,
-        weeklyCount,
-        averageBullCount,
-        hasFewCricketRecords,
-        hasFewCountUpRecords,
-      }),
+      reason: buildMenuReason(menu, context),
+      score: scorePracticeMenu(menu, context),
     }))
     .sort((a, b) => b.score - a.score || a.menu.durationMinutes - b.menu.durationMinutes);
 
-  const todayMenus = uniqueMenus(scoredMenus.slice(0, 3).map((item) => item.menu));
-  const supportMenus = uniqueMenus(
+  const todayMenus = uniqueRecommendations(scoredMenus.slice(0, 3));
+  const supportMenus = uniqueRecommendations(
     scoredMenus
-      .filter((item) => !todayMenus.some((menu) => menu.id === item.menu.id))
-      .slice(0, 3)
-      .map((item) => item.menu),
+      .filter(
+        (item) => !todayMenus.some((recommendation) => recommendation.menu.id === item.menu.id),
+      )
+      .slice(0, 3),
   );
 
   return {
     todayMenus,
     supportMenus,
-    reasonText: buildReasonText(records, weeklyCount, averageBullCount, hasFewCricketRecords),
+    reasonText: buildReasonText(records, context),
   };
 }
 
-function scorePracticeMenu(
-  menu: PracticeMenu,
-  context: {
-    profile: UserProfile | null;
-    machineType: DartMachine;
-    weeklyCount: number;
-    averageBullCount: number;
-    hasFewCricketRecords: boolean;
-    hasFewCountUpRecords: boolean;
-  },
-) {
+function scorePracticeMenu(menu: PracticeMenu, context: RecommendationContext) {
   let score = 0;
 
   if (context.profile?.level === menu.level) {
@@ -96,39 +97,68 @@ function scorePracticeMenu(
   return score - menu.difficulty;
 }
 
-function buildReasonText(
-  records: PracticeRecord[],
-  weeklyCount: number,
-  averageBullCount: number,
-  hasFewCricketRecords: boolean,
-) {
+function buildMenuReason(menu: PracticeMenu, context: RecommendationContext) {
+  const matchedProblem = context.profile?.mainProblems.find((problem) =>
+    menu.targetProblems.includes(problem),
+  );
+
+  if (matchedProblem) {
+    return `${matchedProblem}に対応するため、${menu.purpose}`;
+  }
+
+  if (
+    context.averageBullCount > 0 &&
+    context.averageBullCount < 8 &&
+    menu.tags.includes('ブル練習')
+  ) {
+    return '直近のブル数が少ないため、COUNT-UPでブル率を確認します。';
+  }
+
+  if (context.hasFewCricketRecords && menu.gameTypes.includes('CRICKET')) {
+    return 'CRICKETの記録が少ないため、ナンバー別の精度確認を優先します。';
+  }
+
+  if (context.weeklyCount < 3 && menu.durationMinutes <= 12) {
+    return '今週の練習回数が少ないため、短時間で終えられるメニューです。';
+  }
+
+  if (context.profile?.level === menu.level) {
+    return `${menu.title}は現在レベルに合った確認メニューです。`;
+  }
+
+  return '直近の記録バランスを補うための候補です。';
+}
+
+function buildReasonText(records: PracticeRecord[], context: RecommendationContext) {
   if (records.length === 0) {
     return 'まだ記録が少ないため、短時間で結果と感覚を残しやすい練習を優先します。';
   }
 
-  if (averageBullCount < 8) {
+  if (context.averageBullCount < 8) {
     return 'ブル数が少なめなので、まずはCOUNT-UPでブル率を安定させる練習を優先します。';
   }
 
-  if (hasFewCricketRecords) {
+  if (context.hasFewCricketRecords) {
     return 'クリケット記録が少ないため、15〜20のナンバー練習を追加します。';
   }
 
-  if (weeklyCount < 3) {
+  if (context.weeklyCount < 3) {
     return '今週の練習回数が少ないため、短時間で完了できるメニューを優先します。';
   }
 
   return '直近の記録バランスを見て、得点練習とフォーム確認を組み合わせます。';
 }
 
-function uniqueMenus(menus: PracticeMenu[]) {
+function uniqueRecommendations(
+  recommendations: { menu: PracticeMenu; reason: string }[],
+): RecommendedPracticeMenu[] {
   const seen = new Set<string>();
-  return menus.filter((menu) => {
-    if (seen.has(menu.id)) {
+  return recommendations.filter((recommendation) => {
+    if (seen.has(recommendation.menu.id)) {
       return false;
     }
 
-    seen.add(menu.id);
+    seen.add(recommendation.menu.id);
     return true;
   });
 }

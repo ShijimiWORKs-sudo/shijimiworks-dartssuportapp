@@ -14,25 +14,40 @@ import type {
   AnalysisSummary,
   AppState,
   LegacyStoredState,
+  PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
   UserProfile,
 } from '../types';
 
-const schemaVersion = 1;
+const schemaVersion = 2;
 const appStateStorageKey = 'DartsSupportApp:appState';
 const profileStorageKey = 'DartsSupportApp:userProfile';
 const recordsStorageKey = 'DartsSupportApp:practiceRecords';
+
+export const defaultPracticeFilterState: PracticeFilterState = {
+  level: 'all',
+  machineType: 'all',
+  gameType: 'all',
+  problemTag: null,
+};
 
 type AppStateContextValue = {
   isLoading: boolean;
   profile: UserProfile | null;
   records: PracticeRecord[];
+  favoritePracticeMenuIds: string[];
+  practiceFilterState: PracticeFilterState;
   saveProfile: (profile: Omit<UserProfile, 'level'>) => Promise<void>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
+  toggleFavoritePracticeMenu: (id: string) => Promise<void>;
+  isFavoritePracticeMenu: (id: string) => boolean;
+  savePracticeFilterState: (filterState: PracticeFilterState) => Promise<void>;
+  resetPracticeFilterState: () => Promise<void>;
   getRecordById: (id: string) => PracticeRecord | null;
+  getRecordsByPracticeMenuId: (id: string) => PracticeRecord[];
   getWeeklyPracticeCount: () => number;
   getLatestRecord: () => PracticeRecord | null;
   getAnalysisSummary: () => AnalysisSummary;
@@ -44,6 +59,10 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [records, setRecords] = useState<PracticeRecord[]>([]);
+  const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
+  const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
+    defaultPracticeFilterState,
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -67,9 +86,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
         setProfile(migratedState.profile);
         setRecords(sortRecords(migratedState.records));
+        setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
+        setPracticeFilterState(migratedState.practiceFilterState);
 
-        if (!storedAppState) {
-          await persistAppState(migratedState.profile, migratedState.records);
+        if (!storedAppState || JSON.parse(storedAppState).schemaVersion !== schemaVersion) {
+          await persistAppState(migratedState);
         }
       } finally {
         if (mounted) {
@@ -85,6 +106,22 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  const persistCurrentState = useCallback(
+    async (overrides: Partial<Omit<AppState, 'schemaVersion'>>) => {
+      const nextState: AppState = {
+        schemaVersion,
+        profile,
+        records,
+        favoritePracticeMenuIds,
+        practiceFilterState,
+        ...overrides,
+      };
+
+      await persistAppState(nextState);
+    },
+    [favoritePracticeMenuIds, practiceFilterState, profile, records],
+  );
+
   const saveProfile = useCallback(
     async (profileInput: Omit<UserProfile, 'level'>) => {
       const nextProfile: UserProfile = {
@@ -93,9 +130,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       };
 
       setProfile(nextProfile);
-      await persistAppState(nextProfile, records);
+      await persistCurrentState({ profile: nextProfile });
     },
-    [records],
+    [persistCurrentState],
   );
 
   const addPracticeRecord = useCallback(
@@ -108,9 +145,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
       const nextRecords = sortRecords([nextRecord, ...records]);
       setRecords(nextRecords);
-      await persistAppState(profile, nextRecords);
+      await persistCurrentState({ records: nextRecords });
     },
-    [profile, records],
+    [persistCurrentState, records],
   );
 
   const updatePracticeRecord = useCallback(
@@ -134,22 +171,58 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       );
 
       setRecords(nextRecords);
-      await persistAppState(profile, nextRecords);
+      await persistCurrentState({ records: nextRecords });
     },
-    [profile, records],
+    [persistCurrentState, records],
   );
 
   const deletePracticeRecord = useCallback(
     async (id: string) => {
       const nextRecords = records.filter((record) => record.id !== id);
       setRecords(nextRecords);
-      await persistAppState(profile, nextRecords);
+      await persistCurrentState({ records: nextRecords });
     },
-    [profile, records],
+    [persistCurrentState, records],
   );
+
+  const toggleFavoritePracticeMenu = useCallback(
+    async (id: string) => {
+      const nextIds = isFavoritePracticeMenuId(favoritePracticeMenuIds, id)
+        ? favoritePracticeMenuIds.filter((favoriteId) => favoriteId !== id)
+        : [...favoritePracticeMenuIds, id];
+
+      setFavoritePracticeMenuIds(nextIds);
+      await persistCurrentState({ favoritePracticeMenuIds: nextIds });
+    },
+    [favoritePracticeMenuIds, persistCurrentState],
+  );
+
+  const isFavoritePracticeMenu = useCallback(
+    (id: string) => isFavoritePracticeMenuId(favoritePracticeMenuIds, id),
+    [favoritePracticeMenuIds],
+  );
+
+  const savePracticeFilterState = useCallback(
+    async (filterState: PracticeFilterState) => {
+      const nextFilterState = normalizePracticeFilterState(filterState);
+      setPracticeFilterState(nextFilterState);
+      await persistCurrentState({ practiceFilterState: nextFilterState });
+    },
+    [persistCurrentState],
+  );
+
+  const resetPracticeFilterState = useCallback(async () => {
+    setPracticeFilterState(defaultPracticeFilterState);
+    await persistCurrentState({ practiceFilterState: defaultPracticeFilterState });
+  }, [persistCurrentState]);
 
   const getRecordById = useCallback(
     (id: string) => records.find((record) => record.id === id) ?? null,
+    [records],
+  );
+
+  const getRecordsByPracticeMenuId = useCallback(
+    (id: string) => records.filter((record) => record.practiceMenuId === id),
     [records],
   );
 
@@ -168,11 +241,18 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       isLoading,
       profile,
       records,
+      favoritePracticeMenuIds,
+      practiceFilterState,
       saveProfile,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
+      toggleFavoritePracticeMenu,
+      isFavoritePracticeMenu,
+      savePracticeFilterState,
+      resetPracticeFilterState,
       getRecordById,
+      getRecordsByPracticeMenuId,
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
@@ -181,11 +261,18 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       isLoading,
       profile,
       records,
+      favoritePracticeMenuIds,
+      practiceFilterState,
       saveProfile,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
+      toggleFavoritePracticeMenu,
+      isFavoritePracticeMenu,
+      savePracticeFilterState,
+      resetPracticeFilterState,
       getRecordById,
+      getRecordsByPracticeMenuId,
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
@@ -205,14 +292,15 @@ export function useAppState() {
   return context;
 }
 
-async function persistAppState(profile: UserProfile | null, records: PracticeRecord[]) {
-  const appState: AppState = {
-    schemaVersion,
-    profile,
-    records: sortRecords(records),
-  };
-
-  await AsyncStorage.setItem(appStateStorageKey, JSON.stringify(appState));
+async function persistAppState(appState: AppState) {
+  await AsyncStorage.setItem(
+    appStateStorageKey,
+    JSON.stringify({
+      ...appState,
+      records: sortRecords(appState.records),
+      practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
+    }),
+  );
 }
 
 export function migrateAppState(
@@ -224,16 +312,22 @@ export function migrateAppState(
       schemaVersion,
       profile: legacyState.profile,
       records: sortRecords(legacyState.records),
+      favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
+      practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
     };
   }
 
-  const parsedState = JSON.parse(storedAppState) as Partial<AppState>;
+  const parsedState = JSON.parse(storedAppState) as Partial<AppState> & {
+    schemaVersion?: number;
+  };
 
   if (parsedState.schemaVersion === schemaVersion) {
     return {
       schemaVersion,
       profile: parsedState.profile ?? null,
       records: sortRecords(parsedState.records ?? []),
+      favoritePracticeMenuIds: parsedState.favoritePracticeMenuIds ?? [],
+      practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
     };
   }
 
@@ -241,7 +335,22 @@ export function migrateAppState(
     schemaVersion,
     profile: parsedState.profile ?? legacyState.profile,
     records: sortRecords(parsedState.records ?? legacyState.records),
+    favoritePracticeMenuIds: parsedState.favoritePracticeMenuIds ?? [],
+    practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
   };
+}
+
+function normalizePracticeFilterState(filterState?: PracticeFilterState): PracticeFilterState {
+  return {
+    level: filterState?.level ?? defaultPracticeFilterState.level,
+    machineType: filterState?.machineType ?? defaultPracticeFilterState.machineType,
+    gameType: filterState?.gameType ?? defaultPracticeFilterState.gameType,
+    problemTag: filterState?.problemTag ?? defaultPracticeFilterState.problemTag,
+  };
+}
+
+function isFavoritePracticeMenuId(favoritePracticeMenuIds: string[], id: string) {
+  return favoritePracticeMenuIds.includes(id);
 }
 
 function sortRecords(records: PracticeRecord[]) {

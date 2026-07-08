@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '../components/Card';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
 import { libraryCategories } from '../constants/mockData';
+import { practiceMenus } from '../constants/practiceMenus';
 import { colors } from '../constants/theme';
 
 export default function LibraryScreen() {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState(libraryCategories[0].id);
   const selectedCategory = useMemo(
     () => libraryCategories.find((category) => category.id === selectedId) ?? libraryCategories[0],
@@ -48,6 +51,28 @@ export default function LibraryScreen() {
           <Text style={styles.articleMeta}>仮記事 / 要約カード</Text>
         </Card>
       ))}
+
+      {selectedCategory.id === 'practice-menus' ? (
+        <>
+          <SectionTitle
+            title="練習メニューから探す"
+            subtitle="関連資料との紐づけ準備用の一覧です。"
+          />
+          {practiceMenus.slice(0, 8).map((menu) => (
+            <Pressable
+              key={menu.id}
+              accessibilityRole="button"
+              onPress={() => router.push(`/practice/${menu.id}`)}
+              style={({ pressed }) => [styles.practiceMenuRow, pressed && styles.pressed]}
+            >
+              <Text style={styles.practiceMenuTitle}>{menu.title}</Text>
+              <Text style={styles.practiceMenuSummary}>
+                {menu.tags.slice(0, 3).join(' / ')} / {menu.durationMinutes}分
+              </Text>
+            </Pressable>
+          ))}
+        </>
+      ) : null}
     </ScreenShell>
   );
 }
@@ -95,5 +120,27 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '800',
+  },
+  practiceMenuRow: {
+    minHeight: 68,
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  practiceMenuTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  practiceMenuSummary: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  pressed: {
+    opacity: 0.72,
   },
 });

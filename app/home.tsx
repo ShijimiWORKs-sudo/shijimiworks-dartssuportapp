@@ -20,17 +20,27 @@ const menuLinks = [
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
   { label: 'フォーム相談', href: '/consult', helper: '固定アドバイス確認' },
   { label: '資料ライブラリ', href: '/library', helper: '仮の記事カード' },
+  { label: 'お気に入り練習', href: '/favorites', helper: '登録済みメニュー' },
   { label: '設定を編集', href: '/settings', helper: 'RTと悩みを更新' },
 ] as const;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isLoading, profile, records, getWeeklyPracticeCount, getLatestRecord } = useAppState();
+  const {
+    isLoading,
+    profile,
+    records,
+    getWeeklyPracticeCount,
+    getLatestRecord,
+    isFavoritePracticeMenu,
+    toggleFavoritePracticeMenu,
+  } = useAppState();
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
   const latestRecord = getLatestRecord();
   const recommendation = recommendPracticeMenus(profile, records);
   const recommended = recommendation.todayMenus[0];
+  const recommendedMenu = recommended?.menu;
 
   return (
     <ScreenShell>
@@ -73,21 +83,27 @@ export default function HomeScreen() {
 
       <Card muted>
         <SectionTitle title="今日のおすすめ練習" subtitle={recommendation.reasonText} />
-        {recommended ? (
+        {recommendedMenu ? (
           <>
-            <Text style={styles.recommendTitle}>{recommended.title}</Text>
-            <Text style={styles.recommendBody}>{recommended.purpose}</Text>
+            <Text style={styles.recommendTitle}>{recommendedMenu.title}</Text>
+            <Text style={styles.recommendReason}>{recommended.reason}</Text>
+            <Text style={styles.recommendBody}>{recommendedMenu.purpose}</Text>
             <View style={styles.recommendFooter}>
-              <Text style={styles.pill}>{recommended.durationMinutes}分</Text>
-              <Text style={styles.pill}>{recommended.gameTypes.join(' / ')}</Text>
+              <Text style={styles.pill}>{recommendedMenu.durationMinutes}分</Text>
+              <Text style={styles.pill}>{recommendedMenu.gameTypes.join(' / ')}</Text>
             </View>
             <View style={styles.practiceAction}>
+              <AppButton
+                label={isFavoritePracticeMenu(recommendedMenu.id) ? '★ 登録済み' : '☆ お気に入り'}
+                onPress={() => void toggleFavoritePracticeMenu(recommendedMenu.id)}
+                variant="secondary"
+              />
               <AppButton
                 label="練習する"
                 onPress={() =>
                   router.push({
                     pathname: '/record',
-                    params: { practiceMenuId: recommended.id },
+                    params: { practiceMenuId: recommendedMenu.id },
                   })
                 }
               />
@@ -207,6 +223,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
+  },
+  recommendReason: {
+    marginTop: 8,
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   recommendFooter: {
     flexDirection: 'row',

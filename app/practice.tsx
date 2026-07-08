@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppButton } from '../components/AppButton';
 import { PracticeMenuCard } from '../components/PracticeMenuCard';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
@@ -11,7 +12,13 @@ import { concerns } from '../constants/mockData';
 import { matchesMachine, practiceMenus } from '../constants/practiceMenus';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
-import type { DartMachine, PracticeGame, PracticeMenu, SkillLevelId } from '../types';
+import type {
+  DartMachine,
+  PracticeFilterState,
+  PracticeGame,
+  PracticeMenu,
+  SkillLevelId,
+} from '../types';
 import { recommendPracticeMenus } from '../utils/recommendPracticeMenus';
 
 type LevelFilter = SkillLevelId | 'all';
@@ -42,12 +49,20 @@ const gameFilters: { label: string; value: GameFilter }[] = [
 
 export default function PracticeScreen() {
   const router = useRouter();
-  const { profile, records } = useAppState();
+  const {
+    profile,
+    records,
+    practiceFilterState,
+    savePracticeFilterState,
+    resetPracticeFilterState,
+    isFavoritePracticeMenu,
+    toggleFavoritePracticeMenu,
+  } = useAppState();
   const recommendation = recommendPracticeMenus(profile, records);
-  const [levelFilter, setLevelFilter] = useState<LevelFilter>(profile?.level ?? 'all');
-  const [machineFilter, setMachineFilter] = useState<MachineFilter>(profile?.machineType ?? 'all');
-  const [gameFilter, setGameFilter] = useState<GameFilter>('all');
-  const [problemFilter, setProblemFilter] = useState<string>('all');
+  const levelFilter = practiceFilterState.level ?? 'all';
+  const machineFilter = practiceFilterState.machineType ?? 'all';
+  const gameFilter = practiceFilterState.gameType ?? 'all';
+  const problemFilter = practiceFilterState.problemTag ?? 'all';
 
   const filteredMenus = useMemo(
     () =>
@@ -67,29 +82,39 @@ export default function PracticeScreen() {
   const goToDetail = (menu: PracticeMenu) => router.push(`/practice/${menu.id}`);
   const goToRecord = (menu: PracticeMenu) =>
     router.push({ pathname: '/record', params: { practiceMenuId: menu.id } });
+  const updateFilter = (nextFilterState: PracticeFilterState) =>
+    void savePracticeFilterState({
+      ...practiceFilterState,
+      ...nextFilterState,
+    });
 
   return (
     <ScreenShell>
       <SectionTitle title="今日の練習" subtitle={recommendation.reasonText} />
 
       <SectionTitle title="今日のおすすめ練習" />
-      {recommendation.todayMenus.map((menu) => (
+      {recommendation.todayMenus.map(({ menu, reason }) => (
         <PracticeMenuCard
           key={menu.id}
           menu={menu}
-          reason={recommendation.reasonText}
+          reason={reason}
+          isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
 
       <SectionTitle title="補助練習" subtitle="メイン練習の前後に足せるメニューです。" />
-      {recommendation.supportMenus.map((menu) => (
+      {recommendation.supportMenus.map(({ menu, reason }) => (
         <PracticeMenuCard
           key={menu.id}
           menu={menu}
+          reason={reason}
+          isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
 
@@ -98,15 +123,20 @@ export default function PracticeScreen() {
         title="レベル"
         items={levelFilters}
         value={levelFilter}
-        onChange={setLevelFilter}
+        onChange={(level) => updateFilter({ level })}
       />
       <FilterGroup
         title="機種"
         items={machineFilters}
         value={machineFilter}
-        onChange={setMachineFilter}
+        onChange={(machineType) => updateFilter({ machineType })}
       />
-      <FilterGroup title="ゲーム" items={gameFilters} value={gameFilter} onChange={setGameFilter} />
+      <FilterGroup
+        title="ゲーム"
+        items={gameFilters}
+        value={gameFilter}
+        onChange={(gameType) => updateFilter({ gameType })}
+      />
       <FilterGroup
         title="悩み"
         items={[
@@ -114,7 +144,14 @@ export default function PracticeScreen() {
           ...concerns.map((concern) => ({ label: concern, value: concern })),
         ]}
         value={problemFilter}
-        onChange={setProblemFilter}
+        onChange={(problemTag) =>
+          updateFilter({ problemTag: problemTag === 'all' ? null : problemTag })
+        }
+      />
+      <AppButton
+        label="フィルタをリセット"
+        onPress={() => void resetPracticeFilterState()}
+        variant="secondary"
       />
 
       <View style={styles.resultHeader}>
@@ -124,8 +161,10 @@ export default function PracticeScreen() {
         <PracticeMenuCard
           key={menu.id}
           menu={menu}
+          isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
     </ScreenShell>

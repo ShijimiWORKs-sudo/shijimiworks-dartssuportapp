@@ -1,19 +1,25 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../../components/AppButton';
 import { Card } from '../../components/Card';
 import { ScreenShell } from '../../components/ScreenShell';
 import { SectionTitle } from '../../components/SectionTitle';
-import { gameLabels, machineLabels } from '../../constants/labels';
+import { conditionLabels, gameLabels, machineLabels } from '../../constants/labels';
 import { levelLabels } from '../../constants/levels';
 import { getPracticeMenuById } from '../../constants/practiceMenus';
 import { colors } from '../../constants/theme';
+import { useAppState } from '../../contexts/AppStateContext';
+import type { PracticeRecord } from '../../types';
 
 export default function PracticeMenuDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const { getRecordsByPracticeMenuId, isFavoritePracticeMenu, toggleFavoritePracticeMenu } =
+    useAppState();
   const menu = id ? getPracticeMenuById(id) : null;
+  const menuRecords = menu ? getRecordsByPracticeMenuId(menu.id) : [];
+  const latestRecord = menuRecords[0] ?? null;
 
   if (!menu) {
     return (
@@ -32,6 +38,11 @@ export default function PracticeMenuDetailScreen() {
       <SectionTitle
         title={menu.title}
         subtitle={`${levelLabels[menu.level]} / 難易度 ${menu.difficulty}`}
+      />
+      <AppButton
+        label={isFavoritePracticeMenu(menu.id) ? '★ 登録済み' : '☆ お気に入り'}
+        onPress={() => void toggleFavoritePracticeMenu(menu.id)}
+        variant="secondary"
       />
 
       <Card muted>
@@ -72,6 +83,46 @@ export default function PracticeMenuDetailScreen() {
         </View>
       </Card>
 
+      <Card muted>
+        <Text style={styles.cardTitle}>この練習の記録履歴</Text>
+        <View style={styles.historyStats}>
+          <HistoryStat label="記録回数" value={`${menuRecords.length}回`} />
+          <HistoryStat
+            label="直近実施日"
+            value={latestRecord ? formatShortDate(latestRecord.date) : '-'}
+          />
+          <HistoryStat
+            label="平均スコア"
+            value={
+              menuRecords.length
+                ? String(Math.round(average(menuRecords.map((record) => record.score))))
+                : '-'
+            }
+          />
+          <HistoryStat
+            label="平均ブル数"
+            value={
+              menuRecords.length
+                ? String(Math.round(average(menuRecords.map((record) => record.bullCount))))
+                : '-'
+            }
+          />
+        </View>
+        {menuRecords.length === 0 ? (
+          <Text style={styles.bodyText}>この練習の記録はまだありません。</Text>
+        ) : (
+          <View style={styles.recordList}>
+            {menuRecords.slice(0, 3).map((record) => (
+              <PracticeRecordMiniCard
+                key={record.id}
+                record={record}
+                onPress={() => router.push(`/records/${record.id}`)}
+              />
+            ))}
+          </View>
+        )}
+      </Card>
+
       <AppButton
         label="この練習を記録する"
         onPress={() =>
@@ -82,11 +133,50 @@ export default function PracticeMenuDetailScreen() {
         }
       />
       <AppButton
+        label="このメニューの記録をすべて見る"
+        onPress={() => router.push(`/practice/${menu.id}/records`)}
+        variant="secondary"
+      />
+      <AppButton
         label="今日の練習へ戻る"
         onPress={() => router.push('/practice')}
         variant="secondary"
       />
     </ScreenShell>
+  );
+}
+
+type HistoryStatProps = {
+  label: string;
+  value: string;
+};
+
+function HistoryStat({ label, value }: HistoryStatProps) {
+  return (
+    <View style={styles.historyStat}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.historyValue}>{value}</Text>
+    </View>
+  );
+}
+
+type PracticeRecordMiniCardProps = {
+  record: PracticeRecord;
+  onPress: () => void;
+};
+
+function PracticeRecordMiniCard({ record, onPress }: PracticeRecordMiniCardProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.recordMiniCard, pressed && styles.pressed]}
+    >
+      <Text style={styles.recordMiniTitle}>{formatShortDate(record.date)}</Text>
+      <Text style={styles.bodyText}>
+        スコア {record.score} / Bull {record.bullCount} / {conditionLabels[record.condition]}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -124,6 +214,21 @@ function DetailList({ title, items }: DetailListProps) {
   );
 }
 
+function average(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function formatShortDate(date: string) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+  }).format(new Date(date));
+}
+
 const styles = StyleSheet.create({
   detailRow: {
     gap: 4,
@@ -152,6 +257,43 @@ const styles = StyleSheet.create({
   list: {
     gap: 8,
     marginTop: 10,
+  },
+  historyStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  historyStat: {
+    width: '47%',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  historyValue: {
+    marginTop: 4,
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  recordList: {
+    gap: 8,
+  },
+  recordMiniCard: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  recordMiniTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  pressed: {
+    opacity: 0.72,
   },
   tags: {
     flexDirection: 'row',

@@ -10,11 +10,20 @@ import { Card } from './Card';
 type PracticeMenuCardProps = {
   menu: PracticeMenu;
   reason?: string;
+  isFavorite?: boolean;
   onViewDetails: () => void;
   onRecord: () => void;
+  onToggleFavorite?: () => void;
 };
 
-export function PracticeMenuCard({ menu, reason, onViewDetails, onRecord }: PracticeMenuCardProps) {
+export function PracticeMenuCard({
+  menu,
+  reason,
+  isFavorite = false,
+  onViewDetails,
+  onRecord,
+  onToggleFavorite,
+}: PracticeMenuCardProps) {
   return (
     <Card>
       <View style={styles.header}>
@@ -36,6 +45,13 @@ export function PracticeMenuCard({ menu, reason, onViewDetails, onRecord }: Prac
         ))}
       </View>
       <View style={styles.actions}>
+        {onToggleFavorite ? (
+          <AppButton
+            label={isFavorite ? '★ 登録済み' : '☆ お気に入り'}
+            onPress={onToggleFavorite}
+            variant="secondary"
+          />
+        ) : null}
         <AppButton label="詳細を見る" onPress={onViewDetails} variant="secondary" />
         <AppButton label="この練習を記録" onPress={onRecord} />
       </View>

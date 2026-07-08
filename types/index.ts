@@ -22,6 +22,7 @@ export type PracticeMenu = {
   difficulty: 1 | 2 | 3 | 4 | 5;
   tags: string[];
   sourceNotes?: string[];
+  relatedKnowledgeIds?: string[];
 };
 
 export type UserProfile = {
@@ -47,15 +48,26 @@ export type PracticeRecord = {
 
 export type PracticeRecordInput = Omit<PracticeRecord, 'id' | 'date'>;
 
+export type PracticeFilterState = {
+  level?: SkillLevelId | 'all';
+  machineType?: DartMachine | 'all';
+  gameType?: PracticeGame | 'all';
+  problemTag?: string | null;
+};
+
 export type AppState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   profile: UserProfile | null;
   records: PracticeRecord[];
+  favoritePracticeMenuIds: string[];
+  practiceFilterState: PracticeFilterState;
 };
 
 export type LegacyStoredState = {
   profile: UserProfile | null;
   records: PracticeRecord[];
+  favoritePracticeMenuIds?: string[];
+  practiceFilterState?: PracticeFilterState;
 };
 
 export type AnalysisSummary = {
