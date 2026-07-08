@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { conditionLabels } from '../constants/labels';
-import { practiceMenus } from '../constants/mockData';
+import { practiceMenus } from '../constants/practiceMenus';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
 import type {
   Condition,
   DartMachine,
   PracticeGame,
+  PracticeMenu,
   PracticeRecord,
   PracticeRecordInput,
 } from '../types';
@@ -25,6 +26,7 @@ const conditions: { label: string; value: Condition }[] = [
 
 type PracticeRecordFormProps = {
   initialRecord?: PracticeRecord;
+  initialPracticeMenu?: PracticeMenu | null;
   submitLabel: string;
   onSubmit: (record: PracticeRecordInput) => Promise<void>;
   onCancel?: () => void;
@@ -32,12 +34,14 @@ type PracticeRecordFormProps = {
 
 export function PracticeRecordForm({
   initialRecord,
+  initialPracticeMenu,
   submitLabel,
   onSubmit,
   onCancel,
 }: PracticeRecordFormProps) {
   const { profile } = useAppState();
   const defaultMenu =
+    initialPracticeMenu ??
     practiceMenus.find((menu) => menu.level === profile?.level) ??
     practiceMenus.find((menu) => menu.level === 'intermediate') ??
     practiceMenus[0];
@@ -48,7 +52,9 @@ export function PracticeRecordForm({
   const [machine, setMachine] = useState<Exclude<DartMachine, 'BOTH'>>(
     initialRecord?.machineType ?? defaultMachine,
   );
-  const [game, setGame] = useState<PracticeGame>(initialRecord?.gameType ?? 'COUNT-UP');
+  const [game, setGame] = useState<PracticeGame>(
+    initialRecord?.gameType ?? defaultMenu.gameTypes[0] ?? 'COUNT-UP',
+  );
   const [condition, setCondition] = useState<Condition>(initialRecord?.condition ?? 'normal');
   const [score, setScore] = useState(initialRecord ? String(initialRecord.score) : '');
   const [bullCount, setBullCount] = useState(initialRecord ? String(initialRecord.bullCount) : '');
@@ -78,7 +84,8 @@ export function PracticeRecordForm({
       return;
     }
 
-    const matchedMenu = practiceMenus.find((menu) => menu.title === practiceMenuName.trim());
+    const matchedMenu =
+      initialPracticeMenu ?? practiceMenus.find((menu) => menu.title === practiceMenuName.trim());
 
     setError('');
     await onSubmit({

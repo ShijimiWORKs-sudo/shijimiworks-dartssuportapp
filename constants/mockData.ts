@@ -1,4 +1,4 @@
-import type { LibraryCategory, PracticeMenu } from '../types';
+import type { LibraryCategory } from '../types';
 
 export const concerns = [
   '01が苦手',
@@ -9,92 +9,6 @@ export const concerns = [
   'イップス気味',
   '練習方法が分からない',
 ];
-
-export const practiceMenus: PracticeMenu[] = [
-  {
-    id: 'beginner-count-up',
-    title: 'ブル位置確認 COUNT-UP',
-    level: 'beginner',
-    purpose: '力まず同じリズムでブル周辺へ集める',
-    duration: '12分',
-    game: 'COUNT-UP',
-    metrics: ['スコア', 'ブル数', '主観メモ'],
-  },
-  {
-    id: 'beginner-01-finish',
-    title: '01上がり目メモ練習',
-    level: 'beginner',
-    purpose: '残り点を見て次の狙いを決める癖を作る',
-    duration: '10分',
-    game: '01',
-    metrics: ['スコア', 'ミスした残り点', '調子'],
-  },
-  {
-    id: 'beginner-release',
-    title: '近距離リリース確認',
-    level: 'beginner',
-    purpose: '抜けや引っかかりをセルフチェックする',
-    duration: '8分',
-    game: 'OTHER',
-    metrics: ['抜け感', 'フォームメモ'],
-  },
-  {
-    id: 'intermediate-cricket-cover',
-    title: '19カバードリル',
-    level: 'intermediate',
-    purpose: '20が詰まった後のカバー精度を上げる',
-    duration: '12分',
-    game: 'CRICKET',
-    metrics: ['19マーク数', '20ミス数', '集中度'],
-  },
-  {
-    id: 'intermediate-bull-rhythm',
-    title: 'Bull安定 + 01切り替え',
-    level: 'intermediate',
-    purpose: 'ブル狙いから01の実戦判断へつなげる',
-    duration: '10分',
-    game: '01',
-    metrics: ['ブル数', 'PPD相当', '調子'],
-  },
-  {
-    id: 'intermediate-cricket-count-up',
-    title: 'Cricket Count-Up確認',
-    level: 'intermediate',
-    purpose: '得意ナンバーと弱点ナンバーを分ける',
-    duration: '8分',
-    game: 'CRICKET',
-    metrics: ['マーク数', '弱点ナンバー'],
-  },
-  {
-    id: 'advanced-pressure-01',
-    title: '01プレッシャーセット',
-    level: 'advanced',
-    purpose: '高い集中状態でアレンジと決定力を確認する',
-    duration: '12分',
-    game: '01',
-    metrics: ['上がり率', 'ミス傾向', 'メンタル'],
-  },
-  {
-    id: 'advanced-cricket-switch',
-    title: 'Cricket切り替え判断',
-    level: 'advanced',
-    purpose: '攻める場面と閉める場面の判断速度を上げる',
-    duration: '10分',
-    game: 'CRICKET',
-    metrics: ['マーク数', '判断メモ'],
-  },
-  {
-    id: 'advanced-form-reset',
-    title: 'フォーム再現性チェック',
-    level: 'advanced',
-    purpose: '試合前に崩れやすい動作を短時間で整える',
-    duration: '8分',
-    game: 'OTHER',
-    metrics: ['違和感', '修正ポイント'],
-  },
-];
-
-export const analysisBars = [42, 58, 51, 66, 63, 72, 78];
 
 export const fixedAdvice: Record<string, string> = {
   スタンス: '足幅と重心位置を毎回同じにして、1投目の前に肩の向きを確認しましょう。',
@@ -107,6 +21,22 @@ export const fixedAdvice: Record<string, string> = {
 };
 
 export const libraryCategories: LibraryCategory[] = [
+  {
+    id: 'practice-menus',
+    title: '練習メニュー',
+    articles: [
+      {
+        id: 'pm1',
+        title: '練習メニューDBとの連携予定',
+        summary: '今後、各練習メニューに出典メモや参考資料を紐づけます。',
+      },
+      {
+        id: 'pm2',
+        title: 'メニュー選びの考え方',
+        summary: 'レベル、悩み、直近記録から今日の練習を絞る設計です。',
+      },
+    ],
+  },
   {
     id: 'beginner',
     title: '初級練習',

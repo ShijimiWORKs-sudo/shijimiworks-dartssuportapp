@@ -8,9 +8,9 @@ import { SectionTitle } from '../components/SectionTitle';
 import { StatCard } from '../components/StatCard';
 import { conditionLabels, gameLabels, machineLabels } from '../constants/labels';
 import { levelLabels } from '../constants/levels';
-import { practiceMenus } from '../constants/mockData';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
+import { recommendPracticeMenus } from '../utils/recommendPracticeMenus';
 
 const logo = require('../assets/images/logo.png');
 
@@ -25,14 +25,12 @@ const menuLinks = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isLoading, profile, getWeeklyPracticeCount, getLatestRecord } = useAppState();
+  const { isLoading, profile, records, getWeeklyPracticeCount, getLatestRecord } = useAppState();
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
   const latestRecord = getLatestRecord();
-  const recommended =
-    practiceMenus.find((menu) => menu.level === profile?.level) ??
-    practiceMenus.find((menu) => menu.level === 'intermediate') ??
-    practiceMenus[0];
+  const recommendation = recommendPracticeMenus(profile, records);
+  const recommended = recommendation.todayMenus[0];
 
   return (
     <ScreenShell>
@@ -74,16 +72,30 @@ export default function HomeScreen() {
       </View>
 
       <Card muted>
-        <SectionTitle
-          title="今日のおすすめ練習"
-          subtitle={profile?.mainProblems.join(' / ') ?? '初期設定後に悩みが表示されます'}
-        />
-        <Text style={styles.recommendTitle}>{recommended.title}</Text>
-        <Text style={styles.recommendBody}>{recommended.purpose}</Text>
-        <View style={styles.recommendFooter}>
-          <Text style={styles.pill}>{recommended.duration}</Text>
-          <Text style={styles.pill}>{recommended.game}</Text>
-        </View>
+        <SectionTitle title="今日のおすすめ練習" subtitle={recommendation.reasonText} />
+        {recommended ? (
+          <>
+            <Text style={styles.recommendTitle}>{recommended.title}</Text>
+            <Text style={styles.recommendBody}>{recommended.purpose}</Text>
+            <View style={styles.recommendFooter}>
+              <Text style={styles.pill}>{recommended.durationMinutes}分</Text>
+              <Text style={styles.pill}>{recommended.gameTypes.join(' / ')}</Text>
+            </View>
+            <View style={styles.practiceAction}>
+              <AppButton
+                label="練習する"
+                onPress={() =>
+                  router.push({
+                    pathname: '/record',
+                    params: { practiceMenuId: recommended.id },
+                  })
+                }
+              />
+            </View>
+          </>
+        ) : (
+          <Text style={styles.recommendBody}>おすすめ練習を準備中です。</Text>
+        )}
       </Card>
 
       {latestRecord ? (
@@ -199,6 +211,9 @@ const styles = StyleSheet.create({
   recommendFooter: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 14,
+  },
+  practiceAction: {
     marginTop: 14,
   },
   pill: {

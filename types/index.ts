@@ -10,10 +10,18 @@ export type PracticeMenu = {
   id: string;
   title: string;
   level: SkillLevelId;
+  machineTypes: DartMachine[];
+  gameTypes: PracticeGame[];
+  targetProblems: string[];
+  durationMinutes: number;
   purpose: string;
-  duration: string;
-  game: PracticeGame;
-  metrics: string[];
+  steps: string[];
+  recordItems: string[];
+  evaluationPoints: string[];
+  adviceText: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  tags: string[];
+  sourceNotes?: string[];
 };
 
 export type UserProfile = {

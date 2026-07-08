@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { machineLabels } from '../constants/labels';
+import { levelLabels } from '../constants/levels';
 import { colors } from '../constants/theme';
 import type { PracticeMenu } from '../types';
 import { AppButton } from './AppButton';
@@ -7,26 +9,36 @@ import { Card } from './Card';
 
 type PracticeMenuCardProps = {
   menu: PracticeMenu;
-  onStart: () => void;
+  reason?: string;
+  onViewDetails: () => void;
+  onRecord: () => void;
 };
 
-export function PracticeMenuCard({ menu, onStart }: PracticeMenuCardProps) {
+export function PracticeMenuCard({ menu, reason, onViewDetails, onRecord }: PracticeMenuCardProps) {
   return (
     <Card>
       <View style={styles.header}>
         <Text style={styles.title}>{menu.title}</Text>
-        <Text style={styles.badge}>{menu.game}</Text>
+        <Text style={styles.badge}>{menu.durationMinutes}分</Text>
       </View>
+      <Text style={styles.meta}>
+        {levelLabels[menu.level]} /{' '}
+        {menu.machineTypes.map((machine) => machineLabels[machine]).join('・')} /{' '}
+        {menu.gameTypes.join('・')}
+      </Text>
+      {reason ? <Text style={styles.reason}>{reason}</Text> : null}
       <Text style={styles.purpose}>{menu.purpose}</Text>
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>目安時間</Text>
-        <Text style={styles.detailText}>{menu.duration}</Text>
+      <View style={styles.tags}>
+        {menu.tags.slice(0, 4).map((tag) => (
+          <Text key={tag} style={styles.tag}>
+            {tag}
+          </Text>
+        ))}
       </View>
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>記録する項目</Text>
-        <Text style={styles.detailText}>{menu.metrics.join(' / ')}</Text>
+      <View style={styles.actions}>
+        <AppButton label="詳細を見る" onPress={onViewDetails} variant="secondary" />
+        <AppButton label="この練習を記録" onPress={onRecord} />
       </View>
-      <AppButton label="この練習を開始" onPress={onStart} variant="secondary" />
     </Card>
   );
 }
@@ -54,24 +66,44 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     backgroundColor: colors.primarySoft,
   },
+  meta: {
+    marginTop: 8,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  reason: {
+    marginTop: 10,
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
   purpose: {
     marginTop: 10,
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
   },
-  detailRow: {
-    marginTop: 10,
-    gap: 3,
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
   },
-  detailLabel: {
-    color: colors.text,
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+    color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '800',
+    backgroundColor: colors.primarySoft,
   },
-  detailText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+  actions: {
+    gap: 10,
+    marginTop: 14,
   },
 });
