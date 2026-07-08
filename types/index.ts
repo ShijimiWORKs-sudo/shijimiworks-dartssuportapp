@@ -16,6 +16,40 @@ export type PracticeMenu = {
   metrics: string[];
 };
 
+export type UserProfile = {
+  rating: number;
+  level: SkillLevelId;
+  machineType: DartMachine;
+  mainProblems: string[];
+};
+
+export type PracticeRecord = {
+  id: string;
+  date: string;
+  practiceMenuId: string;
+  practiceMenuName: string;
+  machineType: Exclude<DartMachine, 'BOTH'>;
+  gameType: PracticeGame;
+  score: number;
+  bullCount: number;
+  cricketMarks: number;
+  condition: Condition;
+  memo: string;
+};
+
+export type PracticeRecordInput = Omit<PracticeRecord, 'id' | 'date'>;
+
+export type AnalysisSummary = {
+  practiceCount: number;
+  countUpAverageScore: number | null;
+  averageBullCount: number | null;
+  latestPracticeDate: string | null;
+  latestRecord: PracticeRecord | null;
+  chartValues: number[];
+  improvementComment: string;
+  nextPracticeTitle: string;
+};
+
 export type LibraryCategory = {
   id: string;
   title: string;

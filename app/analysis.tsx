@@ -1,30 +1,69 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
 import { StatCard } from '../components/StatCard';
-import { analysisBars } from '../constants/mockData';
 import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 
 export default function AnalysisScreen() {
+  const router = useRouter();
+  const { getAnalysisSummary } = useAppState();
+  const summary = getAnalysisSummary();
+
+  if (summary.practiceCount === 0) {
+    return (
+      <ScreenShell>
+        <SectionTitle title="分析" subtitle="保存済み練習記録から自動集計します。" />
+        <Card muted>
+          <Text style={styles.emptyTitle}>まだ記録がありません</Text>
+          <Text style={styles.bodyText}>
+            練習記録を1件保存すると、練習回数、COUNT-UP平均、平均ブル数、改善コメントが表示されます。
+          </Text>
+        </Card>
+        <AppButton label="練習記録を入力する" onPress={() => router.push('/record')} />
+      </ScreenShell>
+    );
+  }
+
   return (
     <ScreenShell>
-      <SectionTitle title="分析" subtitle="モックデータで改善傾向を確認できます。" />
+      <SectionTitle title="分析" subtitle="保存済み練習記録から改善傾向を確認できます。" />
 
       <View style={styles.statsRow}>
-        <StatCard label="COUNT-UP平均" value="612" helper="+28 / 2週" />
-        <StatCard label="ブル率" value="34%" helper="+4pt" />
+        <StatCard
+          label="練習回数"
+          value={`${summary.practiceCount}回`}
+          helper={
+            summary.latestPracticeDate ? `直近 ${formatDate(summary.latestPracticeDate)}` : '-'
+          }
+        />
+        <StatCard
+          label="COUNT-UP平均"
+          value={summary.countUpAverageScore === null ? '-' : String(summary.countUpAverageScore)}
+          helper="COUNT-UP記録のみ"
+        />
       </View>
       <View style={styles.statsRow}>
-        <StatCard label="練習回数" value="3回" helper="今週" />
-        <StatCard label="記録メモ" value="7件" helper="直近14日" />
+        <StatCard
+          label="平均ブル数"
+          value={summary.averageBullCount === null ? '-' : String(summary.averageBullCount)}
+          helper="全記録平均"
+        />
+        <StatCard
+          label="直近練習日"
+          value={summary.latestPracticeDate ? formatShortDate(summary.latestPracticeDate) : '-'}
+          helper={summary.latestRecord?.gameType ?? '-'}
+        />
       </View>
 
       <Card>
-        <SectionTitle title="14日トレンド" subtitle="棒グラフ風の簡易表示です。" />
+        <SectionTitle title="スコア推移" subtitle="保存済みスコアから棒グラフ風に表示します。" />
         <View style={styles.chart}>
-          {analysisBars.map((height, index) => (
+          {summary.chartValues.map((height, index) => (
             <View key={`${height}-${index}`} style={styles.barTrack}>
               <View style={[styles.bar, { height }]} />
             </View>
@@ -34,19 +73,32 @@ export default function AnalysisScreen() {
 
       <Card muted>
         <Text style={styles.cardTitle}>直近の改善コメント</Text>
-        <Text style={styles.bodyText}>
-          COUNT-UP平均とブル率は上向きです。クリケットの19で落ちやすいので、次回は20を追いすぎず
-          19カバーへ切り替える練習を優先しましょう。
-        </Text>
+        <Text style={styles.bodyText}>{summary.improvementComment}</Text>
       </Card>
 
       <Card>
         <Text style={styles.cardTitle}>次にやるべき練習</Text>
-        <Text style={styles.nextPractice}>19カバードリル</Text>
-        <Text style={styles.bodyText}>目的: 20が詰まった後のカバー精度を上げる。</Text>
+        <Text style={styles.nextPractice}>{summary.nextPracticeTitle}</Text>
+        <Text style={styles.bodyText}>保存データをもとにした固定ロジックのおすすめです。</Text>
       </Card>
     </ScreenShell>
   );
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
+function formatShortDate(date: string) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    month: 'numeric',
+    day: 'numeric',
+  }).format(new Date(date));
 }
 
 const styles = StyleSheet.create({
@@ -72,6 +124,11 @@ const styles = StyleSheet.create({
   bar: {
     borderRadius: 999,
     backgroundColor: colors.primary,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
   },
   cardTitle: {
     color: colors.text,
