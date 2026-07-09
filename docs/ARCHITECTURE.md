@@ -89,23 +89,29 @@ AsyncStorage key:
 
 ```ts
 {
-  schemaVersion: 4,
+  schemaVersion: 6,
   profile: UserProfile | null,
   records: PracticeRecord[],
   favoritePracticeMenuIds: string[],
   practiceFilterState: PracticeFilterState,
   consultHistories: ConsultHistory[],
-  uiTheme: 'light' | 'gray'
+  uiTheme: 'light' | 'gray',
+  backgroundTheme: 'black' | 'brown' | 'purple' | 'orange' | 'white'
 }
 ```
 
-## schemaVersion 4
+## schemaVersion 6
 
-v0.1 では相談履歴保存の `consultHistories` に加えて、実機表示調整用の `uiTheme` を追加しました。初期値は `gray` です。
+現在は相談履歴保存の `consultHistories`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme` を保持します。
+
+初期値:
+
+- `uiTheme`: `gray`
+- `backgroundTheme`: `white`
 
 Migration方針:
 
-- schemaVersion 1/2/3 は `consultHistories: []` と `uiTheme: 'gray'` を必要に応じて補完
-- 既存のプロフィール、練習記録、お気に入り、フィルタ条件は維持
+- schemaVersion 1〜5 は `consultHistories: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
+- 既存のプロフィール、練習記録、お気に入り、フィルタ条件、相談履歴、写真スコア関連データは維持
 - 壊れたJSONはクラッシュさせず、legacy/default値へフォールバック
 - 複雑な破損データ修復はMVP範囲外

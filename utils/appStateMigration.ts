@@ -1,14 +1,15 @@
 import type {
   AppState,
+  BackgroundTheme,
   ConsultHistory,
   LegacyStoredState,
   PracticeFilterState,
   PracticeRecord,
   UiTheme,
 } from '../types';
-import { defaultUiTheme } from '../constants/theme';
+import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 
-export const schemaVersion = 4;
+export const schemaVersion = 6;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -32,6 +33,7 @@ export function migrateAppState(
       practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
       consultHistories: sortConsultHistories(legacyState.consultHistories ?? []),
       uiTheme: safeUiTheme(legacyState.uiTheme),
+      backgroundTheme: safeBackgroundTheme(legacyState.backgroundTheme),
     };
   }
 
@@ -43,6 +45,7 @@ export function migrateAppState(
     practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
     consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
     uiTheme: safeUiTheme(parsedState.uiTheme),
+    backgroundTheme: safeBackgroundTheme(parsedState.backgroundTheme),
   };
 }
 
@@ -88,6 +91,16 @@ function safeConsultHistories(value: ConsultHistory[] | undefined) {
 
 function safeUiTheme(value: unknown): UiTheme {
   return value === 'light' || value === 'gray' ? value : defaultUiTheme;
+}
+
+function safeBackgroundTheme(value: unknown): BackgroundTheme {
+  return value === 'black' ||
+    value === 'brown' ||
+    value === 'purple' ||
+    value === 'orange' ||
+    value === 'white'
+    ? value
+    : defaultBackgroundTheme;
 }
 
 function sortRecords(records: PracticeRecord[]) {

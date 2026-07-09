@@ -10,10 +10,16 @@ import {
 } from 'react';
 
 import { getLevelFromRating } from '../constants/levels';
-import { type ThemeColors, themes } from '../constants/theme';
+import {
+  backgroundThemeColors,
+  defaultBackgroundTheme,
+  type ThemeColors,
+  themes,
+} from '../constants/theme';
 import type {
   AnalysisSummary,
   AppState,
+  BackgroundTheme,
   ConsultHistory,
   PracticeFilterState,
   PracticeRecord,
@@ -41,10 +47,17 @@ type AppStateContextValue = {
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
   uiTheme: UiTheme;
+  backgroundTheme: BackgroundTheme;
   theme: ThemeColors;
   saveProfile: (profile: Omit<UserProfile, 'level'>) => Promise<void>;
   saveProfileAndUiTheme: (profile: Omit<UserProfile, 'level'>, uiTheme: UiTheme) => Promise<void>;
+  saveProfileAndDisplaySettings: (
+    profile: Omit<UserProfile, 'level'>,
+    uiTheme: UiTheme,
+    backgroundTheme: BackgroundTheme,
+  ) => Promise<void>;
   saveUiTheme: (uiTheme: UiTheme) => Promise<void>;
+  saveBackgroundTheme: (backgroundTheme: BackgroundTheme) => Promise<void>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
@@ -71,6 +84,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
   const [uiTheme, setUiTheme] = useState<UiTheme>('gray');
+  const [backgroundTheme, setBackgroundTheme] = useState<BackgroundTheme>(defaultBackgroundTheme);
   const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
     defaultPracticeFilterState,
   );
@@ -101,6 +115,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setPracticeFilterState(migratedState.practiceFilterState);
         setConsultHistories(sortConsultHistories(migratedState.consultHistories));
         setUiTheme(migratedState.uiTheme);
+        setBackgroundTheme(migratedState.backgroundTheme);
 
         if (getStoredSchemaVersion(storedAppState) !== schemaVersion) {
           await persistAppState(migratedState);
@@ -129,12 +144,21 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         practiceFilterState,
         consultHistories,
         uiTheme,
+        backgroundTheme,
         ...overrides,
       };
 
       await persistAppState(nextState);
     },
-    [consultHistories, favoritePracticeMenuIds, practiceFilterState, profile, records, uiTheme],
+    [
+      backgroundTheme,
+      consultHistories,
+      favoritePracticeMenuIds,
+      practiceFilterState,
+      profile,
+      records,
+      uiTheme,
+    ],
   );
 
   const saveProfile = useCallback(
@@ -164,10 +188,41 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [persistCurrentState],
   );
 
+  const saveProfileAndDisplaySettings = useCallback(
+    async (
+      profileInput: Omit<UserProfile, 'level'>,
+      nextUiTheme: UiTheme,
+      nextBackgroundTheme: BackgroundTheme,
+    ) => {
+      const nextProfile: UserProfile = {
+        ...profileInput,
+        level: getLevelFromRating(profileInput.rating),
+      };
+
+      setProfile(nextProfile);
+      setUiTheme(nextUiTheme);
+      setBackgroundTheme(nextBackgroundTheme);
+      await persistCurrentState({
+        profile: nextProfile,
+        uiTheme: nextUiTheme,
+        backgroundTheme: nextBackgroundTheme,
+      });
+    },
+    [persistCurrentState],
+  );
+
   const saveUiTheme = useCallback(
     async (nextUiTheme: UiTheme) => {
       setUiTheme(nextUiTheme);
       await persistCurrentState({ uiTheme: nextUiTheme });
+    },
+    [persistCurrentState],
+  );
+
+  const saveBackgroundTheme = useCallback(
+    async (nextBackgroundTheme: BackgroundTheme) => {
+      setBackgroundTheme(nextBackgroundTheme);
+      await persistCurrentState({ backgroundTheme: nextBackgroundTheme });
     },
     [persistCurrentState],
   );
@@ -299,7 +354,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [consultHistories],
   );
 
-  const theme = themes[uiTheme];
+  const theme = useMemo(
+    () => ({
+      ...themes[uiTheme],
+      background: backgroundThemeColors[backgroundTheme],
+    }),
+    [backgroundTheme, uiTheme],
+  );
 
   const value = useMemo(
     () => ({
@@ -310,10 +371,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       practiceFilterState,
       consultHistories,
       uiTheme,
+      backgroundTheme,
       theme,
       saveProfile,
       saveProfileAndUiTheme,
+      saveProfileAndDisplaySettings,
       saveUiTheme,
+      saveBackgroundTheme,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -338,10 +402,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       practiceFilterState,
       consultHistories,
       uiTheme,
+      backgroundTheme,
       theme,
       saveProfile,
       saveProfileAndUiTheme,
+      saveProfileAndDisplaySettings,
       saveUiTheme,
+      saveBackgroundTheme,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,

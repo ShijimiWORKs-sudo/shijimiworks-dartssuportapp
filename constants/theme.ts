@@ -1,4 +1,4 @@
-import type { UiTheme } from '../types';
+import type { BackgroundTheme, UiTheme } from '../types';
 
 export type ThemeColors = {
   background: string;
@@ -18,6 +18,28 @@ export type ThemeColors = {
 };
 
 export const defaultUiTheme: UiTheme = 'gray';
+export const defaultBackgroundTheme: BackgroundTheme = 'white';
+
+export const backgroundThemeOptions: {
+  id: BackgroundTheme;
+  label: string;
+  hex: string;
+  rgb: string;
+}[] = [
+  { id: 'black', label: '黒', hex: '#040000', rgb: 'R004 G000 B000' },
+  { id: 'brown', label: 'ブラウン', hex: '#955629', rgb: 'R149 G086 B041' },
+  { id: 'purple', label: '紫', hex: '#A64A97', rgb: 'R166 G074 B151' },
+  { id: 'orange', label: 'オレンジ', hex: '#F6AD3C', rgb: 'R246 G173 B060' },
+  { id: 'white', label: '白', hex: '#FFFFFF', rgb: 'R255 G255 B255' },
+];
+
+export const backgroundThemeColors: Record<BackgroundTheme, string> = backgroundThemeOptions.reduce(
+  (accumulator, option) => ({
+    ...accumulator,
+    [option.id]: option.hex,
+  }),
+  {} as Record<BackgroundTheme, string>,
+);
 
 export const themes: Record<UiTheme, ThemeColors> = {
   light: {

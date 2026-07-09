@@ -27,6 +27,8 @@ export type TrendDirection = 'up' | 'down' | 'flat' | 'unknown';
 
 export type UiTheme = 'light' | 'gray';
 
+export type BackgroundTheme = 'black' | 'brown' | 'purple' | 'orange' | 'white';
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -77,13 +79,14 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 4;
+  schemaVersion: 6;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
   uiTheme: UiTheme;
+  backgroundTheme: BackgroundTheme;
 };
 
 export type LegacyStoredState = {
@@ -93,6 +96,7 @@ export type LegacyStoredState = {
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];
   uiTheme?: UiTheme;
+  backgroundTheme?: BackgroundTheme;
 };
 
 export type AnalysisSummary = {

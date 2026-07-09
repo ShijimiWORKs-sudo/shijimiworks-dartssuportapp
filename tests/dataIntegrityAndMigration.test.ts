@@ -13,7 +13,7 @@ test('validateDataIntegrity passes for bundled constants', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 4', () => {
+test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 6', () => {
   const profile = buildProfile();
   const record = buildRecord();
   const migrated = migrateAppState(
@@ -28,11 +28,12 @@ test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 4', () => {
     },
   );
 
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 6);
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
   assert.equal(migrated.uiTheme, 'gray');
+  assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records.length, 1);
 });
@@ -60,7 +61,7 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
     },
   );
 
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 6);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['beginner-bull-count-up-12']);
   assert.equal(migrated.practiceFilterState.level, 'beginner');
   assert.equal(migrated.practiceFilterState.machineType, 'PHOENIX');
@@ -68,6 +69,7 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
   assert.equal(migrated.records[0]?.id, record.id);
   assert.deepEqual(migrated.consultHistories, []);
   assert.equal(migrated.uiTheme, 'light');
+  assert.equal(migrated.backgroundTheme, 'white');
 });
 
 test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => {
@@ -88,11 +90,48 @@ test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => 
     },
   );
 
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 6);
   assert.equal(migrated.uiTheme, 'gray');
+  assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records[0]?.id, record.id);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['advanced-cricket-pressure']);
+});
+
+test('migrateAppState upgrades schemaVersion 5 data and preserves photo score-like fields', () => {
+  const profile = buildProfile();
+  const record = {
+    ...buildRecord({ id: 'photo-record' }),
+    inputMethod: 'photoTap',
+    photoScore: {
+      totalScore: 60,
+      bullCount: 1,
+      tripleCount: 1,
+      doubleCount: 0,
+    },
+  };
+  const migrated = migrateAppState(
+    JSON.stringify({
+      schemaVersion: 5,
+      profile,
+      records: [record],
+      favoritePracticeMenuIds: [],
+      practiceFilterState: defaultPracticeFilterState,
+      consultHistories: [],
+      uiTheme: 'gray',
+    }),
+    {
+      profile: null,
+      records: [],
+    },
+  );
+
+  const migratedRecord = migrated.records[0] as typeof record;
+
+  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.backgroundTheme, 'white');
+  assert.equal(migratedRecord.inputMethod, 'photoTap');
+  assert.equal(migratedRecord.photoScore.totalScore, 60);
 });
 
 test('migrateAppState falls back for broken stored data without crashing', () => {
@@ -103,12 +142,13 @@ test('migrateAppState falls back for broken stored data without crashing', () =>
     records: [legacyRecord],
   });
 
-  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.schemaVersion, 6);
   assert.deepEqual(migrated.profile, legacyProfile);
   assert.equal(migrated.records[0]?.id, 'legacy');
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
   assert.equal(migrated.uiTheme, 'gray');
+  assert.equal(migrated.backgroundTheme, 'white');
 });
 
 test('migrateAppState fills missing fields from safe defaults', () => {
@@ -129,6 +169,7 @@ test('migrateAppState fills missing fields from safe defaults', () => {
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
   assert.equal(migrated.uiTheme, 'gray');
+  assert.equal(migrated.backgroundTheme, 'white');
 });
 
 test('createConsultHistory builds a history with required fields', () => {

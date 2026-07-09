@@ -20,7 +20,7 @@ Expo Router の画面一覧です。
 | `/library`               | 資料ライブラリ     | 検索、カテゴリ/タグ絞り込み、関連練習フィルタ                      | `/library/[id]`, `/practice/[id]`                                                       |
 | `/library/[id]`          | 資料詳細           | 記事本文、関連練習、関連相談、相談導線                             | `/practice/[id]`, `/consult`, `/library`                                                |
 | `/favorites`             | お気に入り練習     | お気に入り登録済み練習メニュー一覧                                 | `/practice/[id]`, `/record`                                                             |
-| `/settings`              | 設定編集           | プロフィール再編集、表示テーマ、公開前情報                         | `/home`, `/legal/privacy`, `/legal/terms`, `/legal/credits`                             |
+| `/settings`              | 設定編集           | プロフィール再編集、表示テーマ、背景色、公開前情報                 | `/home`, `/legal/privacy`, `/legal/terms`, `/legal/credits`                             |
 | `/legal/privacy`         | プライバシー       | 端末内保存、外部送信なし、今後の更新方針                           | `/settings`                                                                             |
 | `/legal/terms`           | 利用規約           | 一般情報、非公式アプリ、医療・専門指導ではない旨                   | `/settings`                                                                             |
 | `/legal/credits`         | クレジット         | 開発、ロゴ、技術、公式素材不使用の明記                             | `/settings`                                                                             |

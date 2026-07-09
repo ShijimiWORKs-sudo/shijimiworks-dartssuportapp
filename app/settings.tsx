@@ -9,9 +9,9 @@ import { SectionTitle } from '../components/SectionTitle';
 import { machineLabels } from '../constants/labels';
 import { getLevelFromRating, levelLabels } from '../constants/levels';
 import { concerns } from '../constants/mockData';
-import { colors } from '../constants/theme';
+import { backgroundThemeOptions, colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
-import type { DartMachine, UiTheme, UserProfile } from '../types';
+import type { BackgroundTheme, DartMachine, UiTheme, UserProfile } from '../types';
 
 const machines: DartMachine[] = ['DARTSLIVE', 'PHOENIX', 'BOTH'];
 const uiThemeOptions: { id: UiTheme; label: string }[] = [
@@ -25,7 +25,7 @@ const legalLinks = [
 ] as const;
 
 export default function SettingsScreen() {
-  const { isLoading, profile, uiTheme } = useAppState();
+  const { backgroundTheme, isLoading, profile, uiTheme } = useAppState();
 
   if (isLoading) {
     return (
@@ -36,21 +36,29 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SettingsForm key={`${profileKey(profile)}-${uiTheme}`} profile={profile} uiTheme={uiTheme} />
+    <SettingsForm
+      key={`${profileKey(profile)}-${uiTheme}-${backgroundTheme}`}
+      backgroundTheme={backgroundTheme}
+      profile={profile}
+      uiTheme={uiTheme}
+    />
   );
 }
 
 type SettingsFormProps = {
+  backgroundTheme: BackgroundTheme;
   profile: UserProfile | null;
   uiTheme: UiTheme;
 };
 
-function SettingsForm({ profile, uiTheme }: SettingsFormProps) {
+function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) {
   const router = useRouter();
-  const { saveProfileAndUiTheme } = useAppState();
+  const { saveProfileAndDisplaySettings } = useAppState();
   const [ratingText, setRatingText] = useState(profile ? String(profile.rating) : '7');
   const [machine, setMachine] = useState<DartMachine>(profile?.machineType ?? 'DARTSLIVE');
   const [selectedUiTheme, setSelectedUiTheme] = useState<UiTheme>(uiTheme);
+  const [selectedBackgroundTheme, setSelectedBackgroundTheme] =
+    useState<BackgroundTheme>(backgroundTheme);
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>(
     profile?.mainProblems.length ? profile.mainProblems : [concerns[1]],
   );
@@ -73,13 +81,14 @@ function SettingsForm({ profile, uiTheme }: SettingsFormProps) {
     }
 
     setError('');
-    await saveProfileAndUiTheme(
+    await saveProfileAndDisplaySettings(
       {
         rating: normalizedRating,
         machineType: machine,
         mainProblems: selectedConcerns,
       },
       selectedUiTheme,
+      selectedBackgroundTheme,
     );
     router.replace('/home');
   };
@@ -154,6 +163,39 @@ function SettingsForm({ profile, uiTheme }: SettingsFormProps) {
               selected={selectedUiTheme === item.id}
               onPress={() => setSelectedUiTheme(item.id)}
             />
+          ))}
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle title="背景色" subtitle="アプリ全体の背景に反映されます。" />
+        <View style={styles.backgroundGrid}>
+          {backgroundThemeOptions.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`背景色を${item.label}にする`}
+              onPress={() => setSelectedBackgroundTheme(item.id)}
+              style={({ pressed }) => [
+                styles.backgroundOption,
+                selectedBackgroundTheme === item.id && styles.backgroundOptionSelected,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.colorSwatch,
+                  {
+                    backgroundColor: item.hex,
+                    borderColor: item.id === 'white' ? colors.border : item.hex,
+                  },
+                ]}
+              />
+              <View style={styles.backgroundTextBox}>
+                <Text style={styles.backgroundLabel}>{item.label}</Text>
+                <Text style={styles.backgroundValue}>{item.hex}</Text>
+              </View>
+            </Pressable>
           ))}
         </View>
       </Card>
@@ -274,6 +316,45 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 13,
     fontWeight: '800',
+  },
+  backgroundGrid: {
+    gap: 10,
+    marginTop: 14,
+  },
+  backgroundOption: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  backgroundOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  colorSwatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  backgroundTextBox: {
+    flex: 1,
+    gap: 2,
+  },
+  backgroundLabel: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  backgroundValue: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   legalList: {
     gap: 10,
