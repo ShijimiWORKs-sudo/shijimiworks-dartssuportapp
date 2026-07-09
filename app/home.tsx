@@ -19,6 +19,7 @@ const logo = require('../assets/images/logo.png');
 const menuLinks = [
   { label: '今日の練習', href: '/practice', helper: 'レベル別メニュー' },
   { label: '練習記録', href: '/records', helper: '一覧・詳細・編集' },
+  { label: '写真スコア記録', href: '/photo-score', helper: '自宅練習を写真から記録' },
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
   { label: 'フォーム相談', href: '/consult', helper: '固定アドバイス確認' },
   { label: '資料ライブラリ', href: '/library', helper: '検索と関連資料' },

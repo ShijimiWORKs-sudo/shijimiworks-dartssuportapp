@@ -24,6 +24,16 @@ export default function RecordsScreen() {
       <AppButton label="今日の練習を記録する" onPress={() => router.push('/record')} />
 
       <Card muted>
+        <Text style={styles.photoTitle}>写真からスコア記録</Text>
+        <Text style={styles.bodyText}>
+          ボード写真を使って、刺さった位置をタップして記録します。
+        </Text>
+        <View style={styles.photoAction}>
+          <AppButton label="写真からスコア記録" onPress={() => router.push('/photo-score')} />
+        </View>
+      </Card>
+
+      <Card muted>
         <Text style={styles.summaryTitle}>記録サマリー</Text>
         <View style={styles.summaryGrid}>
           <SummaryItem label="全記録" value={`${records.length}件`} />
@@ -195,6 +205,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 22,
+  },
+  photoTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  photoAction: {
+    marginTop: 14,
   },
   pressed: {
     opacity: 0.72,
