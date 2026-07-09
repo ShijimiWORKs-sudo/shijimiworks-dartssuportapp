@@ -47,6 +47,18 @@ export type BoardCalibration = {
 
 export type DartHitArea = 'single' | 'double' | 'triple' | 'singleBull' | 'doubleBull' | 'out';
 
+export type PhotoScoreDetectionSource = 'autoCandidate' | 'manualTap' | 'adjusted';
+
+export type PhotoScoreCandidate = {
+  id: string;
+  point: NormalizedPoint;
+  confidence: number;
+  reason: string;
+  selected: boolean;
+};
+
+export type PhotoScoreDetectionMode = 'manual' | 'semiAuto';
+
 export type DartHitResult = {
   id: string;
   point: NormalizedPoint;
@@ -54,6 +66,9 @@ export type DartHitResult = {
   multiplier: 0 | 1 | 2 | 3;
   area: DartHitArea;
   score: number;
+  detectionSource?: PhotoScoreDetectionSource;
+  candidateId?: string;
+  confidence?: number;
 };
 
 export type PhotoScoreEntry = {

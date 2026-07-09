@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, type GestureResponderEvent, View } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '../constants/theme';
@@ -17,13 +17,16 @@ type CanvasMarker = {
   point: NormalizedPoint;
   label: string;
   color?: string;
+  selected?: boolean;
 };
 
 type PhotoBoardCanvasProps = {
   imageUri: string;
   markers: CanvasMarker[];
+  candidateMarkers?: CanvasMarker[];
   calibration?: BoardCalibration | null;
   onPressPoint?: (point: NormalizedPoint) => void;
+  onDragActiveMarker?: (point: NormalizedPoint) => void;
   onInvalidPress?: () => void;
   helperText?: string;
   isExpanded?: boolean;
@@ -32,8 +35,10 @@ type PhotoBoardCanvasProps = {
 export function PhotoBoardCanvas({
   imageUri,
   markers,
+  candidateMarkers = [],
   calibration,
   onPressPoint,
+  onDragActiveMarker,
   onInvalidPress,
   helperText,
   isExpanded = false,
@@ -83,6 +88,22 @@ export function PhotoBoardCanvas({
     onPressPoint(point);
   };
 
+  const handleTouchMove = (event: GestureResponderEvent) => {
+    if (!onDragActiveMarker || hasImageError) {
+      return;
+    }
+
+    const { locationX, locationY } = event.nativeEvent;
+    const point = normalizeTapPoint({ x: locationX, y: locationY }, displayedImageRect);
+
+    if (!point) {
+      onInvalidPress?.();
+      return;
+    }
+
+    onDragActiveMarker(point);
+  };
+
   return (
     <View>
       {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
@@ -90,6 +111,7 @@ export function PhotoBoardCanvas({
         accessibilityRole="button"
         accessibilityLabel="ボード写真上の位置を選択"
         onPress={handlePress}
+        onTouchMove={handleTouchMove}
         onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
         style={[styles.canvas, { height: canvasHeight }]}
       >
@@ -110,6 +132,9 @@ export function PhotoBoardCanvas({
               {calibration ? (
                 <CalibrationOverlay calibration={calibration} imageRect={displayedImageRect} />
               ) : null}
+              {candidateMarkers.map((marker) => (
+                <CandidateOverlay key={marker.id} marker={marker} imageRect={displayedImageRect} />
+              ))}
               {markers.map((marker) => (
                 <MarkerOverlay key={marker.id} marker={marker} imageRect={displayedImageRect} />
               ))}
@@ -168,9 +193,9 @@ function MarkerOverlay({ marker, imageRect }: { marker: CanvasMarker; imageRect:
       <Circle
         cx={point.x}
         cy={point.y}
-        r={18}
+        r={marker.selected ? 23 : 18}
         stroke="#ffffff"
-        strokeWidth={2}
+        strokeWidth={marker.selected ? 4 : 2}
         fill="transparent"
       />
       <SvgText
@@ -178,6 +203,43 @@ function MarkerOverlay({ marker, imageRect }: { marker: CanvasMarker; imageRect:
         y={point.y + 4}
         fill="#ffffff"
         fontSize="12"
+        fontWeight="900"
+        textAnchor="middle"
+      >
+        {marker.label}
+      </SvgText>
+    </>
+  );
+}
+
+function CandidateOverlay({ marker, imageRect }: { marker: CanvasMarker; imageRect: DisplayRect }) {
+  const point = denormalizePoint(marker.point, imageRect);
+  const color = marker.selected ? colors.primary : (marker.color ?? colors.info);
+
+  return (
+    <>
+      <Circle
+        cx={point.x}
+        cy={point.y}
+        r={10}
+        fill={color}
+        opacity={marker.selected ? 0.62 : 0.34}
+      />
+      <Circle
+        cx={point.x}
+        cy={point.y}
+        r={16}
+        stroke={color}
+        strokeDasharray="4 4"
+        strokeWidth={2}
+        fill="transparent"
+        opacity={0.86}
+      />
+      <SvgText
+        x={point.x}
+        y={point.y - 18}
+        fill={color}
+        fontSize="10"
         fontWeight="900"
         textAnchor="middle"
       >
