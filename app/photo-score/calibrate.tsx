@@ -34,6 +34,8 @@ export default function PhotoScoreCalibrateScreen() {
     imageUri?: string;
   }>();
   const [points, setPoints] = useState<NormalizedPoint[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [tapMessage, setTapMessage] = useState('');
   const currentStep = steps[Math.min(points.length, steps.length - 1)];
   const normalizedBoardType = boardType ?? 'OTHER';
   const normalizedImageUri = imageUri ?? '';
@@ -46,6 +48,7 @@ export default function PhotoScoreCalibrateScreen() {
       boardType: normalizedBoardType,
       center: points[0],
       topNumberPoint: points[1],
+      outerPoint: points[2],
       outerRadius: getDistance(points[0], points[2]),
       ringPreset: 'soft',
     };
@@ -55,7 +58,7 @@ export default function PhotoScoreCalibrateScreen() {
     id: `calibration-${index}`,
     point,
     label: index === 0 ? '中心' : index === 1 ? '20' : '外',
-    color: index === 0 ? colors.primary : index === 1 ? colors.warning : colors.info,
+    color: index === 0 ? colors.primary : index === 1 ? colors.info : colors.warning,
   }));
 
   const handlePoint = (point: NormalizedPoint) => {
@@ -63,6 +66,7 @@ export default function PhotoScoreCalibrateScreen() {
       return;
     }
 
+    setTapMessage('');
     setPoints((currentPoints) => [...currentPoints, point]);
   };
 
@@ -100,14 +104,23 @@ export default function PhotoScoreCalibrateScreen() {
       />
 
       <Card>
-        <Text style={styles.stepTitle}>{currentStep.title}</Text>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepTitle}>
+            {points.length >= 3 ? '設定完了' : `${points.length + 1}. ${currentStep.title}`}
+          </Text>
+          <Text style={styles.stepCount}>{points.length}/3</Text>
+        </View>
+        <Text style={styles.bodyText}>1. 中心をタップ / 2. 20方向をタップ / 3. 外周をタップ</Text>
         <PhotoBoardCanvas
           imageUri={normalizedImageUri}
           markers={markers}
           calibration={calibration}
           onPressPoint={handlePoint}
+          onInvalidPress={() => setTapMessage('写真の上をタップしてください。')}
           helperText={currentStep.helper}
+          isExpanded={isExpanded}
         />
+        {tapMessage ? <Text style={styles.warningText}>{tapMessage}</Text> : null}
       </Card>
 
       <Card muted>
@@ -118,11 +131,29 @@ export default function PhotoScoreCalibrateScreen() {
 
       <View style={styles.actionStack}>
         <AppButton
-          label="1つ戻す"
-          onPress={() => setPoints((currentPoints) => currentPoints.slice(0, -1))}
+          label={isExpanded ? '通常表示に戻す' : '大きく表示'}
+          onPress={() => setIsExpanded((currentValue) => !currentValue)}
           variant="secondary"
         />
-        <AppButton label="3本の位置をタップへ" onPress={goNext} />
+        <AppButton
+          label="1つ戻す"
+          onPress={() => {
+            setTapMessage('');
+            setPoints((currentPoints) => currentPoints.slice(0, -1));
+          }}
+          variant="secondary"
+          disabled={points.length === 0}
+        />
+        <AppButton
+          label="リセット"
+          onPress={() => {
+            setTapMessage('');
+            setPoints([]);
+          }}
+          variant="secondary"
+          disabled={points.length === 0}
+        />
+        <AppButton label="3本の位置をタップへ" onPress={goNext} disabled={!calibration} />
         <AppButton
           label="写真選択へ戻る"
           onPress={() => router.replace('/photo-score')}
@@ -134,16 +165,33 @@ export default function PhotoScoreCalibrateScreen() {
 }
 
 const styles = StyleSheet.create({
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 8,
+  },
   stepTitle: {
-    marginBottom: 10,
     color: colors.text,
     fontSize: 18,
+    fontWeight: '900',
+  },
+  stepCount: {
+    color: colors.primaryDark,
+    fontSize: 14,
     fontWeight: '900',
   },
   bodyText: {
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  warningText: {
+    marginTop: 10,
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '800',
   },
   actionStack: {
     gap: 10,

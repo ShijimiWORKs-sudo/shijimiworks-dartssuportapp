@@ -21,6 +21,8 @@ export default function PhotoScoreMarkScreen() {
   const normalizedImageUri = imageUri ?? '';
   const parsedCalibration = useMemo(() => parseCalibration(calibration), [calibration]);
   const [hits, setHits] = useState<DartHitResult[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [tapMessage, setTapMessage] = useState('');
   const summary = calculatePhotoScoreSummary(hits);
   const markers = hits.map((hit, index) => ({
     id: hit.id,
@@ -36,6 +38,7 @@ export default function PhotoScoreMarkScreen() {
     }
 
     const nextHit = calculateDartHit(parsedCalibration, point, `dart-${hits.length + 1}`);
+    setTapMessage('');
     setHits((currentHits) => [...currentHits, nextHit]);
   };
 
@@ -74,13 +77,22 @@ export default function PhotoScoreMarkScreen() {
       />
 
       <Card>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepTitle}>
+            {hits.length >= 3 ? '3本のタップ完了' : `${hits.length + 1}本目をタップしてください`}
+          </Text>
+          <Text style={styles.stepCount}>{hits.length}/3</Text>
+        </View>
         <PhotoBoardCanvas
           imageUri={normalizedImageUri}
           markers={markers}
           calibration={parsedCalibration}
           onPressPoint={handlePoint}
+          onInvalidPress={() => setTapMessage('写真の上をタップしてください。')}
           helperText="ダーツが刺さった先端位置をタップしてください。間違えた場合は1つ戻せます。"
+          isExpanded={isExpanded}
         />
+        {tapMessage ? <Text style={styles.warningText}>{tapMessage}</Text> : null}
       </Card>
 
       <Card muted>
@@ -100,11 +112,29 @@ export default function PhotoScoreMarkScreen() {
 
       <View style={styles.actionStack}>
         <AppButton
-          label="1つ戻す"
-          onPress={() => setHits((currentHits) => currentHits.slice(0, -1))}
+          label={isExpanded ? '通常表示に戻す' : '大きく表示'}
+          onPress={() => setIsExpanded((currentValue) => !currentValue)}
           variant="secondary"
         />
-        <AppButton label="結果を見る" onPress={goResult} />
+        <AppButton
+          label="1本戻す"
+          onPress={() => {
+            setTapMessage('');
+            setHits((currentHits) => currentHits.slice(0, -1));
+          }}
+          variant="secondary"
+          disabled={hits.length === 0}
+        />
+        <AppButton
+          label="リセット"
+          onPress={() => {
+            setTapMessage('');
+            setHits([]);
+          }}
+          variant="secondary"
+          disabled={hits.length === 0}
+        />
+        <AppButton label="結果を見る" onPress={goResult} disabled={hits.length !== 3} />
         <AppButton
           label="キャリブレーションへ戻る"
           onPress={() => router.replace('/photo-score')}
@@ -136,6 +166,23 @@ function formatHit(hit: DartHitResult) {
 }
 
 const styles = StyleSheet.create({
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  stepTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  stepCount: {
+    color: colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '900',
+  },
   summaryTitle: {
     color: colors.text,
     fontSize: 17,
@@ -154,6 +201,12 @@ const styles = StyleSheet.create({
   },
   hitText: {
     color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  warningText: {
+    marginTop: 10,
+    color: colors.warning,
     fontSize: 13,
     fontWeight: '800',
   },

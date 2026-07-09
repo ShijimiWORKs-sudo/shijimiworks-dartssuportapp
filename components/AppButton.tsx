@@ -7,6 +7,7 @@ type AppButtonProps = {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger';
   accessibilityLabel?: string;
+  disabled?: boolean;
 };
 
 export function AppButton({
@@ -14,6 +15,7 @@ export function AppButton({
   onPress,
   variant = 'primary',
   accessibilityLabel,
+  disabled = false,
 }: AppButtonProps) {
   const { theme } = useAppState();
 
@@ -21,6 +23,7 @@ export function AppButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
@@ -31,6 +34,7 @@ export function AppButton({
           borderColor: theme.border,
           backgroundColor: theme.surface,
         },
+        disabled && styles.disabled,
         pressed && styles.pressed,
       ]}
     >
@@ -54,6 +58,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.78,
+  },
+  disabled: {
+    opacity: 0.46,
   },
   label: {
     color: '#ffffff',

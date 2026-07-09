@@ -93,9 +93,17 @@ export default function PhotoScoreResultScreen() {
             markers={markers}
             calibration={parsedCalibration}
             helperText="保存時には画像そのものではなく、座標と判定結果を練習記録へ保存します。"
+            isExpanded
           />
         </Card>
-      ) : null}
+      ) : (
+        <Card muted>
+          <Text style={styles.cardTitle}>写真を表示できませんでした</Text>
+          <Text style={styles.hitText}>
+            座標と判定結果は確認できます。写真を使う場合は最初からやり直してください。
+          </Text>
+        </Card>
+      )}
 
       <View style={styles.statsRow}>
         <ResultStat label="合計" value={`${summary.totalScore}`} />

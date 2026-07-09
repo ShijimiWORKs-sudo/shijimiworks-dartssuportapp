@@ -40,6 +40,7 @@ export type BoardCalibration = {
   boardType: BoardType;
   center: NormalizedPoint;
   topNumberPoint: NormalizedPoint;
+  outerPoint?: NormalizedPoint;
   outerRadius: number;
   ringPreset: 'soft' | 'steelLike' | 'custom';
 };
