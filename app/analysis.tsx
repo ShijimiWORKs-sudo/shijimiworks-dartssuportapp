@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
+import { RoundIconButton } from '../components/RoundIconButton';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
 import { SimpleBarChart, type SimpleBarChartItem } from '../components/SimpleBarChart';
@@ -93,8 +94,8 @@ export default function AnalysisScreen() {
         />
         <StatCard
           label="COUNT-UP平均"
-          value={formatNullable(summary.countUpAverage)}
-          helper="COUNT-UPのみ"
+          value={summary.countUpAverage === null ? 'なし' : String(summary.countUpAverage)}
+          helper={summary.countUpAverage === null ? 'COUNT-UP記録なし' : 'COUNT-UPのみ'}
         />
       </View>
       <View style={styles.statsRow}>
@@ -150,7 +151,15 @@ export default function AnalysisScreen() {
         <Text style={styles.cardTitle}>調子の割合</Text>
         <View style={styles.conditionGrid}>
           {(['good', 'normal', 'bad'] as const).map((condition) => (
-            <View key={condition} style={styles.conditionItem}>
+            <View
+              key={condition}
+              style={[
+                styles.conditionItem,
+                condition === 'good' && styles.conditionGood,
+                condition === 'normal' && styles.conditionNormal,
+                condition === 'bad' && styles.conditionBad,
+              ]}
+            >
               <Text style={styles.conditionValue}>{summary.conditionCounts[condition]}</Text>
               <Text style={styles.conditionLabel}>{conditionLabels[condition]}</Text>
             </View>
@@ -181,13 +190,15 @@ export default function AnalysisScreen() {
             </Text>
           </View>
           <View style={styles.actionStack}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>詳細</Text>
+              <RoundIconButton
+                accessibilityLabel={`${menu.title}の詳細を開く`}
+                onPress={() => router.push(`/practice/${menu.id}`)}
+              />
+            </View>
             <AppButton
-              label="詳細を見る"
-              onPress={() => router.push(`/practice/${menu.id}`)}
-              variant="secondary"
-            />
-            <AppButton
-              label="この練習を記録"
+              label="記録する"
               onPress={() =>
                 router.push({
                   pathname: '/record',
@@ -235,7 +246,7 @@ function buildChartData(
     .map((record) => ({
       label: formatShortDate(record.date),
       value: record[key],
-      color: key === 'bullCount' ? colors.accent : colors.primary,
+      color: key === 'bullCount' ? colors.info : colors.primary,
     }));
 }
 
@@ -367,6 +378,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: colors.surface,
   },
+  conditionGood: {
+    backgroundColor: colors.primarySoft,
+  },
+  conditionNormal: {
+    backgroundColor: '#dbeafe',
+  },
+  conditionBad: {
+    backgroundColor: '#fff3d6',
+  },
   conditionValue: {
     color: colors.text,
     fontSize: 24,
@@ -405,5 +425,16 @@ const styles = StyleSheet.create({
   actionStack: {
     gap: 10,
     marginTop: 14,
+  },
+  detailRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailLabel: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

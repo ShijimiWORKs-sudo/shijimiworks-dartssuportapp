@@ -25,6 +25,8 @@ export type AnalysisPeriod = 'last7Days' | 'last30Days' | 'last90Days' | 'all';
 
 export type TrendDirection = 'up' | 'down' | 'flat' | 'unknown';
 
+export type UiTheme = 'light' | 'gray';
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -75,12 +77,13 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 3;
+  schemaVersion: 4;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
+  uiTheme: UiTheme;
 };
 
 export type LegacyStoredState = {
@@ -89,6 +92,7 @@ export type LegacyStoredState = {
   favoritePracticeMenuIds?: string[];
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];
+  uiTheme?: UiTheme;
 };
 
 export type AnalysisSummary = {

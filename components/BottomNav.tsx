@@ -1,22 +1,23 @@
 import { usePathname, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 
 const tabs = [
-  { href: '/home', label: 'ホーム' },
-  { href: '/practice', label: '練習' },
-  { href: '/records', label: '記録' },
-  { href: '/analysis', label: '分析' },
-  { href: '/consult', label: '相談' },
+  { href: '/home', icon: '⌂', label: 'ホーム' },
+  { href: '/practice', icon: '◎', label: '練習' },
+  { href: '/records', icon: '+', label: '記録' },
+  { href: '/analysis', icon: '↗', label: '分析' },
+  { href: '/consult', icon: '?', label: '相談' },
 ] as const;
 
 export function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme } = useAppState();
 
   return (
-    <View style={styles.nav}>
+    <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.surface }]}>
       {tabs.map((tab) => {
         const active =
           pathname === tab.href || (tab.href !== '/home' && pathname.startsWith(`${tab.href}/`));
@@ -27,9 +28,18 @@ export function BottomNav() {
             accessibilityRole="button"
             accessibilityLabel={`${tab.label}へ移動`}
             onPress={() => router.push(tab.href)}
-            style={styles.item}
+            style={({ pressed }) => [
+              styles.item,
+              active && { backgroundColor: theme.primarySoft },
+              pressed && styles.pressed,
+            ]}
           >
-            <Text style={[styles.label, active && styles.active]}>{tab.label}</Text>
+            <Text style={[styles.icon, { color: active ? theme.primaryDark : theme.textMuted }]}>
+              {tab.icon}
+            </Text>
+            <Text style={[styles.label, { color: active ? theme.primaryDark : theme.textMuted }]}>
+              {tab.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -41,24 +51,33 @@ const styles = StyleSheet.create({
   nav: {
     flexDirection: 'row',
     gap: 6,
-    padding: 8,
-    borderRadius: 8,
+    padding: 7,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   item: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 14,
+  },
+  pressed: {
+    opacity: 0.75,
+  },
+  icon: {
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 20,
   },
   label: {
-    color: colors.textMuted,
-    fontSize: 12,
+    marginTop: 2,
+    fontSize: 10,
     fontWeight: '800',
-  },
-  active: {
-    color: colors.primaryDark,
   },
 });

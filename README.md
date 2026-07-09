@@ -56,6 +56,8 @@ npx expo start
 4. Expo Go でQRコードを読み取ります。
 5. 初期設定、ホーム、練習記録、分析、相談履歴、資料検索を確認します。
 
+Expo Goで確認している間は、画面上部に「コードスキャナー」などExpo Go側の表示が出ることがあります。これは開発確認用アプリのUIで、TestFlightやstandalone buildでは表示されません。
+
 iOS Simulator が使える環境では、起動中のターミナルで `i` を押すか、次を実行します。
 
 ```bash

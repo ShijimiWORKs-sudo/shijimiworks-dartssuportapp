@@ -11,12 +11,16 @@ import { getLevelFromRating, levelLabels } from '../constants/levels';
 import { concerns } from '../constants/mockData';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
-import type { DartMachine, UserProfile } from '../types';
+import type { DartMachine, UiTheme, UserProfile } from '../types';
 
 const machines: DartMachine[] = ['DARTSLIVE', 'PHOENIX', 'BOTH'];
+const uiThemeOptions: { id: UiTheme; label: string }[] = [
+  { id: 'gray', label: 'グレー系' },
+  { id: 'light', label: '白系' },
+];
 
 export default function SettingsScreen() {
-  const { isLoading, profile } = useAppState();
+  const { isLoading, profile, uiTheme } = useAppState();
 
   if (isLoading) {
     return (
@@ -26,18 +30,22 @@ export default function SettingsScreen() {
     );
   }
 
-  return <SettingsForm key={profileKey(profile)} profile={profile} />;
+  return (
+    <SettingsForm key={`${profileKey(profile)}-${uiTheme}`} profile={profile} uiTheme={uiTheme} />
+  );
 }
 
 type SettingsFormProps = {
   profile: UserProfile | null;
+  uiTheme: UiTheme;
 };
 
-function SettingsForm({ profile }: SettingsFormProps) {
+function SettingsForm({ profile, uiTheme }: SettingsFormProps) {
   const router = useRouter();
-  const { saveProfile } = useAppState();
+  const { saveProfileAndUiTheme } = useAppState();
   const [ratingText, setRatingText] = useState(profile ? String(profile.rating) : '7');
   const [machine, setMachine] = useState<DartMachine>(profile?.machineType ?? 'DARTSLIVE');
+  const [selectedUiTheme, setSelectedUiTheme] = useState<UiTheme>(uiTheme);
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>(
     profile?.mainProblems.length ? profile.mainProblems : [concerns[1]],
   );
@@ -60,11 +68,14 @@ function SettingsForm({ profile }: SettingsFormProps) {
     }
 
     setError('');
-    await saveProfile({
-      rating: normalizedRating,
-      machineType: machine,
-      mainProblems: selectedConcerns,
-    });
+    await saveProfileAndUiTheme(
+      {
+        rating: normalizedRating,
+        machineType: machine,
+        mainProblems: selectedConcerns,
+      },
+      selectedUiTheme,
+    );
     router.replace('/home');
   };
 
@@ -123,6 +134,20 @@ function SettingsForm({ profile }: SettingsFormProps) {
                     : [...currentConcerns, item],
                 )
               }
+            />
+          ))}
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle title="表示テーマ" subtitle="実機確認しやすい配色を選べます。" />
+        <View style={styles.chipGrid}>
+          {uiThemeOptions.map((item) => (
+            <ChoiceChip
+              key={item.id}
+              label={item.label}
+              selected={selectedUiTheme === item.id}
+              onPress={() => setSelectedUiTheme(item.id)}
             />
           ))}
         </View>

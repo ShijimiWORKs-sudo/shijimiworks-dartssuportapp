@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 
 type AppButtonProps = {
   label: string;
@@ -15,6 +15,8 @@ export function AppButton({
   variant = 'primary',
   accessibilityLabel,
 }: AppButtonProps) {
+  const { theme } = useAppState();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -22,12 +24,19 @@ export function AppButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        variant === 'secondary' && styles.secondary,
-        variant === 'danger' && styles.danger,
+        {
+          backgroundColor: variant === 'danger' ? theme.danger : theme.primary,
+        },
+        variant === 'secondary' && {
+          borderColor: theme.border,
+          backgroundColor: theme.surface,
+        },
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>{label}</Text>
+      <Text style={[styles.label, variant === 'secondary' && { color: theme.primaryDark }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -38,15 +47,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: colors.primary,
   },
   secondary: {
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  danger: {
-    backgroundColor: colors.danger,
+    backgroundColor: '#ffffff',
   },
   pressed: {
     opacity: 0.78,
@@ -55,8 +59,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
-  },
-  secondaryLabel: {
-    color: colors.primaryDark,
   },
 });

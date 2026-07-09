@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { getLevelFromRating } from '../constants/levels';
+import { type ThemeColors, themes } from '../constants/theme';
 import type {
   AnalysisSummary,
   AppState,
@@ -17,6 +18,7 @@ import type {
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
+  UiTheme,
   UserProfile,
 } from '../types';
 import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
@@ -38,7 +40,11 @@ type AppStateContextValue = {
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
+  uiTheme: UiTheme;
+  theme: ThemeColors;
   saveProfile: (profile: Omit<UserProfile, 'level'>) => Promise<void>;
+  saveProfileAndUiTheme: (profile: Omit<UserProfile, 'level'>, uiTheme: UiTheme) => Promise<void>;
+  saveUiTheme: (uiTheme: UiTheme) => Promise<void>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
@@ -64,6 +70,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [records, setRecords] = useState<PracticeRecord[]>([]);
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
+  const [uiTheme, setUiTheme] = useState<UiTheme>('gray');
   const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
     defaultPracticeFilterState,
   );
@@ -93,6 +100,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
         setPracticeFilterState(migratedState.practiceFilterState);
         setConsultHistories(sortConsultHistories(migratedState.consultHistories));
+        setUiTheme(migratedState.uiTheme);
 
         if (getStoredSchemaVersion(storedAppState) !== schemaVersion) {
           await persistAppState(migratedState);
@@ -120,12 +128,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         favoritePracticeMenuIds,
         practiceFilterState,
         consultHistories,
+        uiTheme,
         ...overrides,
       };
 
       await persistAppState(nextState);
     },
-    [consultHistories, favoritePracticeMenuIds, practiceFilterState, profile, records],
+    [consultHistories, favoritePracticeMenuIds, practiceFilterState, profile, records, uiTheme],
   );
 
   const saveProfile = useCallback(
@@ -137,6 +146,28 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
       setProfile(nextProfile);
       await persistCurrentState({ profile: nextProfile });
+    },
+    [persistCurrentState],
+  );
+
+  const saveProfileAndUiTheme = useCallback(
+    async (profileInput: Omit<UserProfile, 'level'>, nextUiTheme: UiTheme) => {
+      const nextProfile: UserProfile = {
+        ...profileInput,
+        level: getLevelFromRating(profileInput.rating),
+      };
+
+      setProfile(nextProfile);
+      setUiTheme(nextUiTheme);
+      await persistCurrentState({ profile: nextProfile, uiTheme: nextUiTheme });
+    },
+    [persistCurrentState],
+  );
+
+  const saveUiTheme = useCallback(
+    async (nextUiTheme: UiTheme) => {
+      setUiTheme(nextUiTheme);
+      await persistCurrentState({ uiTheme: nextUiTheme });
     },
     [persistCurrentState],
   );
@@ -268,6 +299,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [consultHistories],
   );
 
+  const theme = themes[uiTheme];
+
   const value = useMemo(
     () => ({
       isLoading,
@@ -276,7 +309,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
+      uiTheme,
+      theme,
       saveProfile,
+      saveProfileAndUiTheme,
+      saveUiTheme,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -300,7 +337,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
+      uiTheme,
+      theme,
       saveProfile,
+      saveProfileAndUiTheme,
+      saveUiTheme,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,

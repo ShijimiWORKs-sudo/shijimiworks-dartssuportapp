@@ -13,7 +13,7 @@ test('validateDataIntegrity passes for bundled constants', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 3', () => {
+test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 4', () => {
   const profile = buildProfile();
   const record = buildRecord();
   const migrated = migrateAppState(
@@ -28,10 +28,11 @@ test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 3', () => {
     },
   );
 
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.equal(migrated.uiTheme, 'gray');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records.length, 1);
 });
@@ -51,6 +52,7 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
         gameType: 'COUNT-UP',
         problemTag: 'ブル練習',
       },
+      uiTheme: 'light',
     }),
     {
       profile: null,
@@ -58,12 +60,39 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
     },
   );
 
+  assert.equal(migrated.schemaVersion, 4);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['beginner-bull-count-up-12']);
   assert.equal(migrated.practiceFilterState.level, 'beginner');
   assert.equal(migrated.practiceFilterState.machineType, 'PHOENIX');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records[0]?.id, record.id);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.equal(migrated.uiTheme, 'light');
+});
+
+test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => {
+  const profile = buildProfile();
+  const record = buildRecord();
+  const migrated = migrateAppState(
+    JSON.stringify({
+      schemaVersion: 3,
+      profile,
+      records: [record],
+      favoritePracticeMenuIds: ['advanced-cricket-pressure'],
+      practiceFilterState: defaultPracticeFilterState,
+      consultHistories: [],
+    }),
+    {
+      profile: null,
+      records: [],
+    },
+  );
+
+  assert.equal(migrated.schemaVersion, 4);
+  assert.equal(migrated.uiTheme, 'gray');
+  assert.deepEqual(migrated.profile, profile);
+  assert.equal(migrated.records[0]?.id, record.id);
+  assert.deepEqual(migrated.favoritePracticeMenuIds, ['advanced-cricket-pressure']);
 });
 
 test('migrateAppState falls back for broken stored data without crashing', () => {
@@ -74,11 +103,12 @@ test('migrateAppState falls back for broken stored data without crashing', () =>
     records: [legacyRecord],
   });
 
-  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.schemaVersion, 4);
   assert.deepEqual(migrated.profile, legacyProfile);
   assert.equal(migrated.records[0]?.id, 'legacy');
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.equal(migrated.uiTheme, 'gray');
 });
 
 test('migrateAppState fills missing fields from safe defaults', () => {
@@ -98,6 +128,7 @@ test('migrateAppState fills missing fields from safe defaults', () => {
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.equal(migrated.uiTheme, 'gray');
 });
 
 test('createConsultHistory builds a history with required fields', () => {

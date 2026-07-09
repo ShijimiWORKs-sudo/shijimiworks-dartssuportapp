@@ -6,6 +6,7 @@ import { colors } from '../constants/theme';
 import type { PracticeMenu } from '../types';
 import { AppButton } from './AppButton';
 import { Card } from './Card';
+import { RoundIconButton } from './RoundIconButton';
 
 type PracticeMenuCardProps = {
   menu: PracticeMenu;
@@ -35,8 +36,8 @@ export function PracticeMenuCard({
         {menu.machineTypes.map((machine) => machineLabels[machine]).join('・')} /{' '}
         {menu.gameTypes.join('・')}
       </Text>
-      {reason ? <Text style={styles.reason}>{reason}</Text> : null}
-      <Text style={styles.purpose}>{menu.purpose}</Text>
+      {reason ? <Text style={styles.reason}>{trimSummary(reason, 58)}</Text> : null}
+      <Text style={styles.purpose}>{trimSummary(menu.purpose, 68)}</Text>
       <View style={styles.tags}>
         {menu.tags.slice(0, 4).map((tag) => (
           <Text key={tag} style={styles.tag}>
@@ -45,18 +46,27 @@ export function PracticeMenuCard({
         ))}
       </View>
       <View style={styles.actions}>
-        {onToggleFavorite ? (
-          <AppButton
-            label={isFavorite ? '★ 登録済み' : '☆ お気に入り'}
-            onPress={onToggleFavorite}
-            variant="secondary"
+        <View style={styles.secondaryActions}>
+          {onToggleFavorite ? (
+            <AppButton
+              label={isFavorite ? '★ 登録済み' : '☆ お気に入り'}
+              onPress={onToggleFavorite}
+              variant="secondary"
+            />
+          ) : null}
+          <RoundIconButton
+            accessibilityLabel={`${menu.title}の詳細を開く`}
+            onPress={onViewDetails}
           />
-        ) : null}
-        <AppButton label="詳細を見る" onPress={onViewDetails} variant="secondary" />
+        </View>
         <AppButton label="この練習を記録" onPress={onRecord} />
       </View>
     </Card>
   );
+}
+
+function trimSummary(text: string, maxLength: number) {
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
 const styles = StyleSheet.create({
@@ -121,5 +131,10 @@ const styles = StyleSheet.create({
   actions: {
     gap: 10,
     marginTop: 14,
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
 });

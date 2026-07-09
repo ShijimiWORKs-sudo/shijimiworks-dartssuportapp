@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 
 export type SimpleBarChartItem = {
   label: string;
@@ -19,51 +20,60 @@ export function SimpleBarChart({
   emptyMessage = 'まだグラフを表示できる記録がありません',
   maxValue,
 }: SimpleBarChartProps) {
+  const { theme } = useAppState();
   const visibleData = data.filter((item) => Number.isFinite(item.value));
   const chartMax = Math.max(maxValue ?? 0, ...visibleData.map((item) => item.value), 1);
 
   if (visibleData.length === 0) {
     return (
-      <View style={styles.emptyBox}>
-        <Text style={styles.emptyText}>{emptyMessage}</Text>
+      <View style={[styles.emptyBox, { backgroundColor: theme.surfaceMuted }]}>
+        <Text style={[styles.emptyText, { color: theme.textMuted }]}>{emptyMessage}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.chart}>
-      {visibleData.map((item, index) => {
-        const height = Math.max(12, Math.round((item.value / chartMax) * 104));
+    <View>
+      <View style={styles.chart}>
+        {visibleData.map((item, index) => {
+          const maxBarHeight = visibleData.length === 1 ? 64 : 88;
+          const height = Math.max(12, Math.round((item.value / chartMax) * maxBarHeight));
 
-        return (
-          <View key={`${item.label}-${index}`} style={styles.item}>
-            <View style={styles.track}>
-              <View
-                style={[
-                  styles.bar,
-                  {
-                    height,
-                    backgroundColor: item.color ?? colors.primary,
-                  },
-                ]}
-              />
+          return (
+            <View key={`${item.label}-${index}`} style={styles.item}>
+              <View style={[styles.track, { backgroundColor: theme.surfaceMuted }]}>
+                <View
+                  style={[
+                    styles.bar,
+                    {
+                      height,
+                      backgroundColor: item.color ?? colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text numberOfLines={1} style={[styles.value, { color: theme.text }]}>
+                {item.value}
+              </Text>
+              <Text numberOfLines={1} style={[styles.label, { color: theme.textMuted }]}>
+                {item.label}
+              </Text>
             </View>
-            <Text numberOfLines={1} style={styles.value}>
-              {item.value}
-            </Text>
-            <Text numberOfLines={1} style={styles.label}>
-              {item.label}
-            </Text>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
+      {visibleData.length === 1 ? (
+        <Text style={[styles.hintText, { color: theme.textMuted }]}>
+          記録が増えると推移を比較できます
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   chart: {
-    minHeight: 164,
+    minHeight: 136,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
@@ -76,11 +86,10 @@ const styles = StyleSheet.create({
   },
   track: {
     width: '100%',
-    height: 112,
+    height: 96,
     justifyContent: 'flex-end',
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceMuted,
   },
   bar: {
     width: '100%',
@@ -97,6 +106,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: colors.textMuted,
     fontSize: 10,
+    fontWeight: '700',
+  },
+  hintText: {
+    marginTop: 8,
+    fontSize: 12,
     fontWeight: '700',
   },
   emptyBox: {

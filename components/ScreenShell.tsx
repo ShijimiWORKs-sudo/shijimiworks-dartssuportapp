@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 import { BottomNav } from './BottomNav';
 
 type ScreenShellProps = PropsWithChildren<{
@@ -10,8 +10,10 @@ type ScreenShellProps = PropsWithChildren<{
 }>;
 
 export function ScreenShell({ children, showNav = true }: ScreenShellProps) {
+  const { theme } = useAppState();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -29,7 +31,6 @@ export function ScreenShell({ children, showNav = true }: ScreenShellProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -40,6 +41,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     gap: 16,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 140,
   },
 });

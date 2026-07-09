@@ -4,9 +4,11 @@ import type {
   LegacyStoredState,
   PracticeFilterState,
   PracticeRecord,
+  UiTheme,
 } from '../types';
+import { defaultUiTheme } from '../constants/theme';
 
-export const schemaVersion = 3;
+export const schemaVersion = 4;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -29,6 +31,7 @@ export function migrateAppState(
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
       practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
       consultHistories: sortConsultHistories(legacyState.consultHistories ?? []),
+      uiTheme: safeUiTheme(legacyState.uiTheme),
     };
   }
 
@@ -39,6 +42,7 @@ export function migrateAppState(
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
     practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
     consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
+    uiTheme: safeUiTheme(parsedState.uiTheme),
   };
 }
 
@@ -80,6 +84,10 @@ function safeStringArray(value: string[] | undefined) {
 
 function safeConsultHistories(value: ConsultHistory[] | undefined) {
   return Array.isArray(value) ? value : [];
+}
+
+function safeUiTheme(value: unknown): UiTheme {
+  return value === 'light' || value === 'gray' ? value : defaultUiTheme;
 }
 
 function sortRecords(records: PracticeRecord[]) {

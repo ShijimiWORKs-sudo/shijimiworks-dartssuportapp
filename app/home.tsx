@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
+import { RoundIconButton } from '../components/RoundIconButton';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
 import { StatCard } from '../components/StatCard';
@@ -35,6 +36,7 @@ export default function HomeScreen() {
     getLatestRecord,
     isFavoritePracticeMenu,
     toggleFavoritePracticeMenu,
+    theme,
   } = useAppState();
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
@@ -88,9 +90,11 @@ export default function HomeScreen() {
         <View style={styles.analysisSummaryGrid}>
           <View style={styles.analysisSummaryItem}>
             <Text style={styles.analysisSummaryValue}>
-              {analysisSummary.countUpAverage === null ? '-' : analysisSummary.countUpAverage}
+              {analysisSummary.countUpAverage === null ? 'なし' : analysisSummary.countUpAverage}
             </Text>
-            <Text style={styles.analysisSummaryLabel}>COUNT-UP平均</Text>
+            <Text style={styles.analysisSummaryLabel}>
+              {analysisSummary.countUpAverage === null ? 'COUNT-UP記録なし' : 'COUNT-UP平均'}
+            </Text>
           </View>
           <View style={styles.analysisSummaryItem}>
             <Text style={styles.analysisSummaryValue}>
@@ -114,12 +118,19 @@ export default function HomeScreen() {
           <>
             <Text style={styles.recommendTitle}>{recommendedMenu.title}</Text>
             <Text style={styles.recommendReason}>{recommended.reason}</Text>
-            <Text style={styles.recommendBody}>{recommendedMenu.purpose}</Text>
+            <Text style={styles.recommendBody}>{trimSummary(recommendedMenu.purpose, 70)}</Text>
             <View style={styles.recommendFooter}>
               <Text style={styles.pill}>{recommendedMenu.durationMinutes}分</Text>
               <Text style={styles.pill}>{recommendedMenu.gameTypes.join(' / ')}</Text>
             </View>
             <View style={styles.practiceAction}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>詳細</Text>
+                <RoundIconButton
+                  accessibilityLabel={`${recommendedMenu.title}の詳細を開く`}
+                  onPress={() => router.push(`/practice/${recommendedMenu.id}`)}
+                />
+              </View>
               <AppButton
                 label={isFavoritePracticeMenu(recommendedMenu.id) ? '★ 登録済み' : '☆ お気に入り'}
                 onPress={() => void toggleFavoritePracticeMenu(recommendedMenu.id)}
@@ -176,7 +187,11 @@ export default function HomeScreen() {
             key={item.href}
             accessibilityRole="button"
             onPress={() => router.push(item.href)}
-            style={({ pressed }) => [styles.menuCard, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.menuCard,
+              { borderColor: theme.border, backgroundColor: theme.surface },
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.menuTitle}>{item.label}</Text>
             <Text style={styles.menuHelper}>{item.helper}</Text>
@@ -185,6 +200,10 @@ export default function HomeScreen() {
       </View>
     </ScreenShell>
   );
+}
+
+function trimSummary(text: string, maxLength: number) {
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
 function formatDate(date: string) {
@@ -277,7 +296,19 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   practiceAction: {
+    gap: 10,
     marginTop: 14,
+  },
+  detailRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailLabel: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
   },
   analysisSummaryGrid: {
     flexDirection: 'row',
