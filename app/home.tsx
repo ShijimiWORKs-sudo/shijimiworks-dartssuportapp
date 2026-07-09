@@ -20,7 +20,7 @@ const menuLinks = [
   { label: '練習記録', href: '/records', helper: '一覧・詳細・編集' },
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
   { label: 'フォーム相談', href: '/consult', helper: '固定アドバイス確認' },
-  { label: '資料ライブラリ', href: '/library', helper: '仮の記事カード' },
+  { label: '資料ライブラリ', href: '/library', helper: '検索と関連資料' },
   { label: 'お気に入り練習', href: '/favorites', helper: '登録済みメニュー' },
   { label: '設定を編集', href: '/settings', helper: 'RTと悩みを更新' },
 ] as const;

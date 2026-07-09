@@ -1,6 +1,31 @@
 # DartsSupportApp
 
-Expo + React Native + TypeScript で作る、iPhone 向けソフトダーツ練習支援アプリのMVP土台です。
+DartsSupportApp は、iPhone でソフトダーツの練習メニュー、記録、分析、フォーム相談を確認するための Expo + React Native MVP です。
+
+MVP v0.1 では実データ連携やAI連携は行わず、端末内ローカル保存と固定ロジックで、主要な画面遷移と練習支援の体験を確認できる状態にしています。
+
+## MVPでできること
+
+- 初期設定: レーティング、利用機種、主な悩みを保存
+- 練習メニュー: レベル、悩み、ゲーム種別に応じたメニュー表示
+- おすすめ練習: プロフィールと記録に基づく固定ロジック推薦
+- 練習記録: 入力、一覧、詳細、編集、削除
+- 分析: 期間別集計、ゲーム別集計、簡易グラフ、改善コメント
+- フォーム相談: カテゴリ別の固定アドバイス表示
+- 相談履歴: 相談結果の保存、一覧、詳細、削除
+- 資料ライブラリ: 知識記事の検索、カテゴリ/タグ絞り込み
+- お気に入り: よく使う練習メニューの保存
+
+## 技術スタック
+
+- Expo
+- React Native
+- TypeScript
+- Expo Router
+- React Context
+- AsyncStorage
+- Node.js built-in test runner
+- ESLint / Prettier
 
 ## Requirements
 
@@ -21,14 +46,15 @@ npm install
 npx expo start
 ```
 
-起動後、ターミナルに表示されるQRコードまたはメニューから確認します。
+起動後、ターミナルに表示されるQRコードを Expo Go で読み取ります。
 
-## iPhoneで確認する
+## iPhone Expo Goで確認する
 
 1. iPhone に Expo Go をインストールします。
 2. PC と iPhone を同じネットワークに接続します。
 3. `npx expo start` を実行します。
 4. Expo Go でQRコードを読み取ります。
+5. 初期設定、ホーム、練習記録、分析、相談履歴、資料検索を確認します。
 
 iOS Simulator が使える環境では、起動中のターミナルで `i` を押すか、次を実行します。
 
@@ -42,17 +68,39 @@ npm run ios
 npm run typecheck
 npm run lint
 npm run format:check
+npm test
+npm run validate:data
 ```
 
 ## App identity
 
 - App name: `DartsSupportApp`
 - Expo slug: `darts-support-app`
+- Version: `0.1.0`
 - iOS bundle identifier: `com.shijimiworks.dartssupportapp`
 - Logo path: `assets/images/logo.png`
 
-## Design references
+## 現在未対応のこと
 
+- DARTSLIVE / PHOENIX 公式API連携
+- AI API連携
+- クラウド同期
+- ログイン
+- 外部グラフライブラリ
+- 本番向けデータバックアップ
+
+## 注意
+
+- DARTSLIVE / PHOENIX の公式ロゴ、公式画像、公式APIは使用していません。
+- 機種名は文字ラベルとしてのみ使用しています。
+- 練習・相談内容は一般化したプロトタイプ用情報です。
+- 医療的な診断や治療を目的としたものではありません。
+
+## Docs
+
+- `docs/MVP_FEATURES.md`
+- `docs/ROUTES.md`
+- `docs/ARCHITECTURE.md`
+- `docs/QA_CHECKLIST.md`
+- `docs/RELEASE_NOTES_v0.1.md`
 - `docs/design/README.md`
-- `docs/design/darts_training_app_screen_prompts.md`
-- `docs/design/darts_training_app_mvp_ui_mockup.png`

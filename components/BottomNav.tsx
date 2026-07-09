@@ -19,12 +19,13 @@ export function BottomNav() {
     <View style={styles.nav}>
       {tabs.map((tab) => {
         const active =
-          pathname === tab.href || (tab.href === '/records' && pathname.startsWith('/records'));
+          pathname === tab.href || (tab.href !== '/home' && pathname.startsWith(`${tab.href}/`));
 
         return (
           <Pressable
             key={tab.href}
             accessibilityRole="button"
+            accessibilityLabel={`${tab.label}へ移動`}
             onPress={() => router.push(tab.href)}
             style={styles.item}
           >
