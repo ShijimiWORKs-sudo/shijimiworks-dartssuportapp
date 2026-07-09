@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { conditionLabels } from '../constants/labels';
-import { practiceMenus } from '../constants/practiceMenus';
+import { conditionLabels, gameLabels, machineLabels } from '../constants/labels';
+import { levelLabels } from '../constants/levels';
+import { matchesMachine, practiceMenus } from '../constants/practiceMenus';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
 import type {
@@ -12,12 +13,16 @@ import type {
   PracticeMenu,
   PracticeRecord,
   PracticeRecordInput,
+  SkillLevelId,
 } from '../types';
 import { AppButton } from './AppButton';
 import { Card } from './Card';
 
 const machines: Exclude<DartMachine, 'BOTH'>[] = ['DARTSLIVE', 'PHOENIX'];
 const games: PracticeGame[] = ['COUNT-UP', '01', 'CRICKET', 'OTHER'];
+const levelFilters: (SkillLevelId | 'all')[] = ['all', 'beginner', 'intermediate', 'advanced'];
+const gameFilters: (PracticeGame | 'all')[] = ['all', 'COUNT-UP', '01', 'CRICKET', 'OTHER'];
+const machineFilters: (DartMachine | 'all')[] = ['all', 'DARTSLIVE', 'PHOENIX', 'BOTH'];
 const conditions: { label: string; value: Condition }[] = [
   { label: conditionLabels.good, value: 'good' },
   { label: conditionLabels.normal, value: 'normal' },
@@ -49,6 +54,9 @@ export function PracticeRecordForm({
   const [practiceMenuName, setPracticeMenuName] = useState(
     initialRecord?.practiceMenuName ?? defaultMenu.title,
   );
+  const [selectedPracticeMenuId, setSelectedPracticeMenuId] = useState(
+    initialRecord?.practiceMenuId ?? defaultMenu.id,
+  );
   const [machine, setMachine] = useState<Exclude<DartMachine, 'BOTH'>>(
     initialRecord?.machineType ?? defaultMachine,
   );
@@ -62,7 +70,46 @@ export function PracticeRecordForm({
     initialRecord ? String(initialRecord.cricketMarks) : '',
   );
   const [memo, setMemo] = useState(initialRecord?.memo ?? '');
+  const [menuSearchText, setMenuSearchText] = useState('');
+  const [levelFilter, setLevelFilter] = useState<SkillLevelId | 'all'>('all');
+  const [gameFilter, setGameFilter] = useState<PracticeGame | 'all'>('all');
+  const [machineFilter, setMachineFilter] = useState<DartMachine | 'all'>('all');
   const [error, setError] = useState('');
+  const filteredMenus = useMemo(
+    () =>
+      practiceMenus
+        .filter((menu) => {
+          const searchText = menuSearchText.trim().toLowerCase();
+          const searchTarget = [
+            menu.title,
+            menu.level,
+            ...menu.tags,
+            ...menu.gameTypes,
+            ...menu.targetProblems,
+          ]
+            .join(' ')
+            .toLowerCase();
+
+          return (
+            (!searchText || searchTarget.includes(searchText)) &&
+            (levelFilter === 'all' || menu.level === levelFilter) &&
+            (gameFilter === 'all' || menu.gameTypes.includes(gameFilter)) &&
+            (machineFilter === 'all' || matchesMachine(menu.machineTypes, machineFilter))
+          );
+        })
+        .slice(0, 10),
+    [gameFilter, levelFilter, machineFilter, menuSearchText],
+  );
+
+  const handleSelectMenu = (menu: PracticeMenu) => {
+    setSelectedPracticeMenuId(menu.id);
+    setPracticeMenuName(menu.title);
+    setGame(menu.gameTypes[0] ?? 'COUNT-UP');
+
+    if (!matchesMachine(menu.machineTypes, machine)) {
+      setMachine(menu.machineTypes.includes('PHOENIX') ? 'PHOENIX' : 'DARTSLIVE');
+    }
+  };
 
   const handleSubmit = async () => {
     if (!practiceMenuName.trim()) {
@@ -85,7 +132,9 @@ export function PracticeRecordForm({
     }
 
     const matchedMenu =
-      initialPracticeMenu ?? practiceMenus.find((menu) => menu.title === practiceMenuName.trim());
+      practiceMenus.find((menu) => menu.id === selectedPracticeMenuId) ??
+      practiceMenus.find((menu) => menu.title === practiceMenuName.trim()) ??
+      initialPracticeMenu;
 
     setError('');
     await onSubmit({
@@ -103,12 +152,70 @@ export function PracticeRecordForm({
 
   return (
     <>
+      <Card muted>
+        <Text style={styles.selectorTitle}>練習メニューを選択</Text>
+        <Text style={styles.selectorBody}>
+          メニュー名、タグ、ゲーム種別、レベルで検索できます。手入力での記録もできます。
+        </Text>
+        <TextInput
+          value={menuSearchText}
+          onChangeText={setMenuSearchText}
+          placeholder="例: ブル / CRICKET / release"
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
+        <ChoiceGroup
+          title="レベル"
+          items={levelFilters}
+          value={levelFilter}
+          getLabel={(item) => (item === 'all' ? 'すべて' : levelLabels[item])}
+          onChange={setLevelFilter}
+        />
+        <ChoiceGroup
+          title="ゲーム"
+          items={gameFilters}
+          value={gameFilter}
+          getLabel={(item) => (item === 'all' ? 'すべて' : gameLabels[item])}
+          onChange={setGameFilter}
+        />
+        <ChoiceGroup
+          title="機種"
+          items={machineFilters}
+          value={machineFilter}
+          getLabel={(item) => (item === 'all' ? 'すべて' : machineLabels[item])}
+          onChange={setMachineFilter}
+        />
+        <View style={styles.menuList}>
+          {filteredMenus.map((menu) => (
+            <Pressable
+              key={menu.id}
+              accessibilityRole="button"
+              onPress={() => handleSelectMenu(menu)}
+              style={[
+                styles.menuOption,
+                selectedPracticeMenuId === menu.id && styles.menuOptionSelected,
+              ]}
+            >
+              <Text style={styles.menuOptionTitle}>{menu.title}</Text>
+              <Text style={styles.menuOptionMeta}>
+                {levelLabels[menu.level]} /{' '}
+                {menu.gameTypes.map((item) => gameLabels[item]).join('・')} / {menu.durationMinutes}
+                分
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
       <Card>
         <TextInputField
           label="練習メニュー名"
           placeholder="例: 19カバードリル"
           value={practiceMenuName}
-          onChangeText={setPracticeMenuName}
+          onChangeText={(value) => {
+            setPracticeMenuName(value);
+            setSelectedPracticeMenuId('custom-practice');
+          }}
         />
         <ChoiceGroup title="機種" items={machines} value={machine} onChange={setMachine} />
         <ChoiceGroup title="ゲーム種別" items={games} value={game} onChange={setGame} />
@@ -235,6 +342,45 @@ function toNumericText(value: string) {
 }
 
 const styles = StyleSheet.create({
+  selectorTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  selectorBody: {
+    marginTop: 8,
+    marginBottom: 12,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  menuList: {
+    gap: 8,
+  },
+  menuOption: {
+    minHeight: 72,
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  menuOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  menuOptionTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  menuOptionMeta: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   field: {
     gap: 8,
     marginBottom: 16,

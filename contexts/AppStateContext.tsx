@@ -13,25 +13,22 @@ import { getLevelFromRating } from '../constants/levels';
 import type {
   AnalysisSummary,
   AppState,
-  LegacyStoredState,
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
   UserProfile,
 } from '../types';
 import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
+import {
+  defaultPracticeFilterState,
+  migrateAppState,
+  normalizePracticeFilterState,
+  schemaVersion,
+} from '../utils/appStateMigration';
 
-const schemaVersion = 2;
 const appStateStorageKey = 'DartsSupportApp:appState';
 const profileStorageKey = 'DartsSupportApp:userProfile';
 const recordsStorageKey = 'DartsSupportApp:practiceRecords';
-
-export const defaultPracticeFilterState: PracticeFilterState = {
-  level: 'all',
-  machineType: 'all',
-  gameType: 'all',
-  problemTag: null,
-};
 
 type AppStateContextValue = {
   isLoading: boolean;
@@ -305,52 +302,6 @@ async function persistAppState(appState: AppState) {
       practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
     }),
   );
-}
-
-export function migrateAppState(
-  storedAppState: string | null,
-  legacyState: LegacyStoredState,
-): AppState {
-  if (!storedAppState) {
-    return {
-      schemaVersion,
-      profile: legacyState.profile,
-      records: sortRecords(legacyState.records),
-      favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
-      practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
-    };
-  }
-
-  const parsedState = JSON.parse(storedAppState) as Partial<AppState> & {
-    schemaVersion?: number;
-  };
-
-  if (parsedState.schemaVersion === schemaVersion) {
-    return {
-      schemaVersion,
-      profile: parsedState.profile ?? null,
-      records: sortRecords(parsedState.records ?? []),
-      favoritePracticeMenuIds: parsedState.favoritePracticeMenuIds ?? [],
-      practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
-    };
-  }
-
-  return {
-    schemaVersion,
-    profile: parsedState.profile ?? legacyState.profile,
-    records: sortRecords(parsedState.records ?? legacyState.records),
-    favoritePracticeMenuIds: parsedState.favoritePracticeMenuIds ?? [],
-    practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
-  };
-}
-
-function normalizePracticeFilterState(filterState?: PracticeFilterState): PracticeFilterState {
-  return {
-    level: filterState?.level ?? defaultPracticeFilterState.level,
-    machineType: filterState?.machineType ?? defaultPracticeFilterState.machineType,
-    gameType: filterState?.gameType ?? defaultPracticeFilterState.gameType,
-    problemTag: filterState?.problemTag ?? defaultPracticeFilterState.problemTag,
-  };
 }
 
 function isFavoritePracticeMenuId(favoritePracticeMenuIds: string[], id: string) {

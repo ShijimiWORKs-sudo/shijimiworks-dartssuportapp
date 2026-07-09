@@ -9,6 +9,8 @@
     "android": "expo start --android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.cjs",
+    "test:watch": "node --watch scripts/run-tests.cjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
