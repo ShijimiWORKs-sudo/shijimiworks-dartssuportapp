@@ -10,6 +10,7 @@ import { conditionLabels, gameLabels, machineLabels } from '../constants/labels'
 import { levelLabels } from '../constants/levels';
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
+import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
 import { recommendPracticeMenus } from '../utils/recommendPracticeMenus';
 
 const logo = require('../assets/images/logo.png');
@@ -38,6 +39,7 @@ export default function HomeScreen() {
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
   const latestRecord = getLatestRecord();
+  const analysisSummary = calculateAnalysisSummary(records, 'last30Days', profile);
   const recommendation = recommendPracticeMenus(profile, records);
   const recommended = recommendation.todayMenus[0];
   const recommendedMenu = recommended?.menu;
@@ -80,6 +82,31 @@ export default function HomeScreen() {
           }
         />
       </View>
+
+      <Card>
+        <SectionTitle title="分析サマリー" subtitle="直近30日の保存記録から表示します。" />
+        <View style={styles.analysisSummaryGrid}>
+          <View style={styles.analysisSummaryItem}>
+            <Text style={styles.analysisSummaryValue}>
+              {analysisSummary.countUpAverage === null ? '-' : analysisSummary.countUpAverage}
+            </Text>
+            <Text style={styles.analysisSummaryLabel}>COUNT-UP平均</Text>
+          </View>
+          <View style={styles.analysisSummaryItem}>
+            <Text style={styles.analysisSummaryValue}>
+              {trendLabel(analysisSummary.trendDirection)}
+            </Text>
+            <Text style={styles.analysisSummaryLabel}>最近の傾向</Text>
+          </View>
+        </View>
+        <View style={styles.analysisAction}>
+          <AppButton
+            label="分析を見る"
+            onPress={() => router.push('/analysis')}
+            variant="secondary"
+          />
+        </View>
+      </Card>
 
       <Card muted>
         <SectionTitle title="今日のおすすめ練習" subtitle={recommendation.reasonText} />
@@ -169,6 +196,19 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
+function trendLabel(trendDirection: 'up' | 'down' | 'flat' | 'unknown') {
+  switch (trendDirection) {
+    case 'up':
+      return '上向き';
+    case 'down':
+      return '下向き';
+    case 'flat':
+      return '横ばい';
+    case 'unknown':
+      return '判定前';
+  }
+}
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -237,6 +277,33 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   practiceAction: {
+    marginTop: 14,
+  },
+  analysisSummaryGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  analysisSummaryItem: {
+    flex: 1,
+    minHeight: 74,
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceMuted,
+  },
+  analysisSummaryValue: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  analysisSummaryLabel: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  analysisAction: {
     marginTop: 14,
   },
   pill: {

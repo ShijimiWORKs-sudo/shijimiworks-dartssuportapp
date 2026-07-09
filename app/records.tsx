@@ -9,15 +9,29 @@ import { conditionLabels, gameLabels, machineLabels } from '../constants/labels'
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
 import type { PracticeRecord } from '../types';
+import { filterRecordsByPeriod } from '../utils/analyzePracticeRecords';
 
 export default function RecordsScreen() {
   const router = useRouter();
   const { records } = useAppState();
+  const last30DaysRecords = filterRecordsByPeriod(records, 'last30Days');
+  const countUpRecords = records.filter((record) => record.gameType === 'COUNT-UP');
+  const cricketRecords = records.filter((record) => record.gameType === 'CRICKET');
 
   return (
     <ScreenShell>
       <SectionTitle title="練習記録一覧" subtitle="保存済み記録を新しい順に表示します。" />
       <AppButton label="今日の練習を記録する" onPress={() => router.push('/record')} />
+
+      <Card muted>
+        <Text style={styles.summaryTitle}>記録サマリー</Text>
+        <View style={styles.summaryGrid}>
+          <SummaryItem label="全記録" value={`${records.length}件`} />
+          <SummaryItem label="直近30日" value={`${last30DaysRecords.length}件`} />
+          <SummaryItem label="COUNT-UP" value={`${countUpRecords.length}件`} />
+          <SummaryItem label="CRICKET" value={`${cricketRecords.length}件`} />
+        </View>
+      </Card>
 
       {records.length === 0 ? (
         <Card muted>
@@ -36,6 +50,20 @@ export default function RecordsScreen() {
         </View>
       )}
     </ScreenShell>
+  );
+}
+
+type SummaryItemProps = {
+  label: string;
+  value: string;
+};
+
+function SummaryItem({ label, value }: SummaryItemProps) {
+  return (
+    <View style={styles.summaryItem}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -79,6 +107,36 @@ function formatDate(date: string) {
 const styles = StyleSheet.create({
   list: {
     gap: 10,
+  },
+  summaryTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+  },
+  summaryItem: {
+    width: '47%',
+    minHeight: 70,
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  summaryValue: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  summaryLabel: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
   },
   recordCard: {
     minHeight: 118,

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -24,8 +24,11 @@ const severities = Object.entries(consultSeverityLabels).map(([value, label]) =>
 
 export default function ConsultScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ category?: string }>();
   const { profile, records } = useAppState();
-  const [category, setCategory] = useState<ConsultCategory>('release');
+  const [category, setCategory] = useState<ConsultCategory>(() =>
+    normalizeCategory(params.category),
+  );
   const [severity, setSeverity] = useState<ConsultSeverity>('normal');
   const [userText, setUserText] = useState('');
   const [result, setResult] = useState<ConsultAdviceResult | null>(null);
@@ -197,6 +200,14 @@ function ResultList({ title, items }: ResultListProps) {
       </View>
     </Card>
   );
+}
+
+function normalizeCategory(category?: string): ConsultCategory {
+  if (category && category in consultCategoryLabels) {
+    return category as ConsultCategory;
+  }
+
+  return 'release';
 }
 
 const styles = StyleSheet.create({

@@ -19,6 +19,7 @@ import type {
   PracticeRecordInput,
   UserProfile,
 } from '../types';
+import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
 
 const schemaVersion = 2;
 const appStateStorageKey = 'DartsSupportApp:appState';
@@ -234,7 +235,10 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   const getLatestRecord = useCallback(() => records[0] ?? null, [records]);
 
-  const getAnalysisSummary = useCallback(() => buildAnalysisSummary(records), [records]);
+  const getAnalysisSummary = useCallback(
+    () => calculateAnalysisSummary(records, 'all', profile),
+    [profile, records],
+  );
 
   const value = useMemo(
     () => ({
@@ -363,91 +367,4 @@ function getStartOfWeek(date: Date) {
   start.setDate(start.getDate() - day);
   start.setHours(0, 0, 0, 0);
   return start;
-}
-
-function buildAnalysisSummary(records: PracticeRecord[]): AnalysisSummary {
-  if (records.length === 0) {
-    return {
-      practiceCount: 0,
-      countUpAverageScore: null,
-      averageBullCount: null,
-      latestPracticeDate: null,
-      latestRecord: null,
-      chartValues: [],
-      improvementComment: 'まだ記録がありません。まずは1回分の練習を保存しましょう。',
-      nextPracticeTitle: 'ブル位置確認 COUNT-UP',
-    };
-  }
-
-  const countUpRecords = records.filter((record) => record.gameType === 'COUNT-UP');
-  const countUpAverageScore =
-    countUpRecords.length > 0
-      ? Math.round(average(countUpRecords.map((record) => record.score)))
-      : null;
-  const averageBullCount = Math.round(average(records.map((record) => record.bullCount)));
-  const recentScores = [...records]
-    .reverse()
-    .slice(-7)
-    .map((record) => record.score);
-  const latestRecord = records[0];
-
-  return {
-    practiceCount: records.length,
-    countUpAverageScore,
-    averageBullCount,
-    latestPracticeDate: latestRecord.date,
-    latestRecord,
-    chartValues: buildChartValues(recentScores),
-    improvementComment: buildImprovementComment(records, countUpAverageScore, averageBullCount),
-    nextPracticeTitle: buildNextPracticeTitle(records, averageBullCount),
-  };
-}
-
-function average(values: number[]) {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function buildChartValues(scores: number[]) {
-  if (scores.length === 0) {
-    return [];
-  }
-
-  const maxScore = Math.max(...scores, 1);
-  return scores.map((score) => Math.max(16, Math.round((score / maxScore) * 104)));
-}
-
-function buildImprovementComment(
-  records: PracticeRecord[],
-  countUpAverageScore: number | null,
-  averageBullCount: number,
-) {
-  const latestScore = records[0]?.score ?? 0;
-  const previousScore = records[1]?.score ?? latestScore;
-
-  if (records.length < 3) {
-    return '練習回数がまだ少なめです。週3回の短時間練習で傾向を見えるようにしましょう。';
-  }
-
-  if (averageBullCount < 8) {
-    return 'ブル数が少なめです。次回はCOUNT-UPでブル練習を優先しましょう。';
-  }
-
-  if (countUpAverageScore !== null && latestScore >= previousScore) {
-    return 'COUNT-UP平均が上向きです。現在の練習を継続しつつ、記録メモも残しましょう。';
-  }
-
-  return 'スコアより再現性を優先して、フォームメモとブル数をセットで確認しましょう。';
-}
-
-function buildNextPracticeTitle(records: PracticeRecord[], averageBullCount: number) {
-  if (records.length < 3 || averageBullCount < 8) {
-    return 'ブル位置確認 COUNT-UP';
-  }
-
-  const hasCricket = records.some((record) => record.gameType === 'CRICKET');
-  return hasCricket ? '19カバードリル' : 'Cricket Count-Up確認';
 }

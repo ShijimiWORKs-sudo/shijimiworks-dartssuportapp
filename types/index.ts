@@ -21,6 +21,10 @@ export type ConsultCategory =
 
 export type ConsultSeverity = 'light' | 'normal' | 'serious';
 
+export type AnalysisPeriod = 'last7Days' | 'last30Days' | 'last90Days' | 'all';
+
+export type TrendDirection = 'up' | 'down' | 'flat' | 'unknown';
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -86,14 +90,34 @@ export type LegacyStoredState = {
 };
 
 export type AnalysisSummary = {
-  practiceCount: number;
-  countUpAverageScore: number | null;
-  averageBullCount: number | null;
+  period: AnalysisPeriod;
+  totalPracticeCount: number;
+  countUpAverage: number | null;
+  bullAverage: number | null;
+  cricketMarksAverage: number | null;
+  bestScore: number | null;
   latestPracticeDate: string | null;
-  latestRecord: PracticeRecord | null;
-  chartValues: number[];
-  improvementComment: string;
-  nextPracticeTitle: string;
+  conditionCounts: Record<Condition, number>;
+  gameTypeCounts: Record<PracticeGame, number>;
+  machineTypeCounts: Record<Exclude<DartMachine, 'BOTH'>, number>;
+  trendDirection: TrendDirection;
+  improvementComments: string[];
+  recommendedPracticeMenuIds: string[];
+};
+
+export type GameTypeSummary = {
+  gameType: PracticeGame;
+  count: number;
+  averageScore: number | null;
+  averageBullCount: number | null;
+  averageCricketMarks: number | null;
+};
+
+export type WeeklySummary = {
+  weekLabel: string;
+  practiceCount: number;
+  averageScore: number | null;
+  averageBullCount: number | null;
 };
 
 export type LibraryCategory = {
