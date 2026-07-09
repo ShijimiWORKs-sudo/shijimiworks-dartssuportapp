@@ -4,22 +4,31 @@
     "slug": "darts-support-app",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "dartssupportapp",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#eef1f3"
+    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shijimiworks.dartssupportapp"
+      "bundleIdentifier": "com.shijimiworks.dartssupportapp",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon.png",
-        "backgroundColor": "#f7fbf8"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#eef1f3"
       }
     },
     "web": {
-      "favicon": "./assets/images/app-icon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": ["expo-router"]
   }

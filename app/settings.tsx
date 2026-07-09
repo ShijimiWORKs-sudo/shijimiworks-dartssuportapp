@@ -18,6 +18,11 @@ const uiThemeOptions: { id: UiTheme; label: string }[] = [
   { id: 'gray', label: 'グレー系' },
   { id: 'light', label: '白系' },
 ];
+const legalLinks = [
+  { label: 'プライバシーポリシー', href: '/legal/privacy' },
+  { label: '利用規約', href: '/legal/terms' },
+  { label: 'クレジット', href: '/legal/credits' },
+] as const;
 
 export default function SettingsScreen() {
   const { isLoading, profile, uiTheme } = useAppState();
@@ -153,6 +158,24 @@ function SettingsForm({ profile, uiTheme }: SettingsFormProps) {
         </View>
       </Card>
 
+      <Card>
+        <SectionTitle title="公開前情報" subtitle="TestFlight提出前に確認するページです。" />
+        <View style={styles.legalList}>
+          {legalLinks.map((item) => (
+            <Pressable
+              key={item.href}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.label}を開く`}
+              onPress={() => router.push(item.href)}
+              style={({ pressed }) => [styles.legalLink, pressed && styles.pressed]}
+            >
+              <Text style={styles.legalLabel}>{item.label}</Text>
+              <Text style={styles.legalArrow}>▶</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
       <AppButton label="保存してホームへ" onPress={handleSave} />
       <AppButton label="キャンセル" onPress={() => router.push('/home')} variant="secondary" />
     </ScreenShell>
@@ -251,6 +274,31 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 13,
     fontWeight: '800',
+  },
+  legalList: {
+    gap: 10,
+    marginTop: 14,
+  },
+  legalLink: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  legalLabel: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  legalArrow: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '900',
   },
   pressed: {
     opacity: 0.74,

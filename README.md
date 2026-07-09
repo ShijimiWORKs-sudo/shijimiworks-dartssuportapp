@@ -48,6 +48,13 @@ npx expo start
 
 起動後、ターミナルに表示されるQRコードを Expo Go で読み取ります。
 
+よく使う起動コマンド:
+
+```bash
+npm run start:lan
+npm run start:tunnel
+```
+
 ## iPhone Expo Goで確認する
 
 1. iPhone に Expo Go をインストールします。
@@ -63,6 +70,48 @@ iOS Simulator が使える環境では、起動中のターミナルで `i` を�
 ```bash
 npm run ios
 ```
+
+## EAS Build準備
+
+Expo Goは開発確認用アプリ上でJavaScriptを読み込む確認方法です。TestFlightやApp Store配布では、EAS BuildでiOSアプリ本体を作成します。
+
+EAS CLIはグローバルインストールせず、`npx eas-cli` でも利用できます。
+
+```bash
+npx eas-cli login
+npx eas-cli init
+npx eas-cli build:configure
+```
+
+このリポジトリには `eas.json` を追加済みです。
+
+```bash
+npm run eas:build:preview
+npm run eas:build:production
+npm run eas:submit:ios
+```
+
+Apple Developer Program未加入の場合、iOS配布ビルド、証明書作成、TestFlight提出の段階で止まる可能性があります。Apple Team ID、EAS projectId、App Store Connect情報は実行後に確定するため、架空値は入れていません。
+
+## TestFlightへ進む前に必要なもの
+
+- Apple Developer Programへの加入
+- App Store Connectでの新規アプリ作成
+- Bundle ID: `com.shijimiworks.dartssupportapp`
+- App Store Connect用のPrivacy Policy URL
+- サポートURL
+- TestFlight用スクリーンショット
+- 内部テスター設定
+
+## Legal pages
+
+アプリ内に公開前確認用ページを追加しています。
+
+- `/legal/privacy`
+- `/legal/terms`
+- `/legal/credits`
+
+v0.1.0時点ではログイン、クラウド同期、AI API連携、公式API連携はなく、入力データは端末内AsyncStorageに保存されます。外部送信は行っていません。
 
 ## Quality checks
 
@@ -81,6 +130,8 @@ npm run validate:data
 - Version: `0.1.0`
 - iOS bundle identifier: `com.shijimiworks.dartssupportapp`
 - Logo path: `assets/images/logo.png`
+- Icon path: `assets/images/icon.png`
+- Splash path: `assets/images/splash.png`
 
 ## 現在未対応のこと
 
@@ -103,6 +154,9 @@ npm run validate:data
 - `docs/MVP_FEATURES.md`
 - `docs/ROUTES.md`
 - `docs/ARCHITECTURE.md`
+- `docs/EAS_BUILD_GUIDE.md`
+- `docs/TESTFLIGHT_PREP.md`
+- `docs/APP_STORE_METADATA_DRAFT.md`
 - `docs/QA_CHECKLIST.md`
 - `docs/RELEASE_NOTES_v0.1.md`
 - `docs/design/README.md`
