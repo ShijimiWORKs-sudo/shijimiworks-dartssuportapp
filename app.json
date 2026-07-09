@@ -4,7 +4,7 @@
     "slug": "darts-support-app",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "dartssupportapp",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -14,12 +14,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#071018"
+        "foregroundImage": "./assets/images/app-icon.png",
+        "backgroundColor": "#f7fbf8"
       }
     },
     "web": {
-      "favicon": "./assets/images/logo.png"
+      "favicon": "./assets/images/app-icon.png"
     },
     "plugins": ["expo-router"]
   }
