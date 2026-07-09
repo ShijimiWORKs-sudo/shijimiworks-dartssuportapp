@@ -89,9 +89,9 @@ AsyncStorage key:
 
 ```ts
 {
-  schemaVersion: 6,
+  schemaVersion: 7,
   profile: UserProfile | null,
-  records: PracticeRecord[],
+  records: PracticeRecord[], // photoScore?: PhotoScoreEntry を含む場合あり
   favoritePracticeMenuIds: string[],
   practiceFilterState: PracticeFilterState,
   consultHistories: ConsultHistory[],
@@ -100,9 +100,9 @@ AsyncStorage key:
 }
 ```
 
-## schemaVersion 6
+## schemaVersion 7
 
-現在は相談履歴保存の `consultHistories`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme` を保持します。
+現在は相談履歴保存の `consultHistories`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme`、写真スコア記録用の `PracticeRecord.photoScore` を扱います。
 
 初期値:
 
@@ -111,7 +111,13 @@ AsyncStorage key:
 
 Migration方針:
 
-- schemaVersion 1〜5 は `consultHistories: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
+- schemaVersion 1〜6 は `consultHistories: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
 - 既存のプロフィール、練習記録、お気に入り、フィルタ条件、相談履歴、写真スコア関連データは維持
 - 壊れたJSONはクラッシュさせず、legacy/default値へフォールバック
 - 複雑な破損データ修復はMVP範囲外
+
+写真スコアMVP:
+
+- 画像そのものの永続保存は必須にしない
+- `BoardCalibration`、タップ座標、`DartHitResult[]`、合計スコア、Bull/Triple/Double数を保存
+- 分析画面は既存の `score` / `bullCount` を使うため、大きな変更なしで反映される

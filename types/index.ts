@@ -29,6 +29,45 @@ export type UiTheme = 'light' | 'gray';
 
 export type BackgroundTheme = 'black' | 'brown' | 'purple' | 'orange' | 'white';
 
+export type BoardType = 'DARTSLIVE_ZERO' | 'QUIET_SOFT' | 'CORK' | 'OTHER';
+
+export type NormalizedPoint = {
+  x: number;
+  y: number;
+};
+
+export type BoardCalibration = {
+  boardType: BoardType;
+  center: NormalizedPoint;
+  topNumberPoint: NormalizedPoint;
+  outerRadius: number;
+  ringPreset: 'soft' | 'steelLike' | 'custom';
+};
+
+export type DartHitArea = 'single' | 'double' | 'triple' | 'singleBull' | 'doubleBull' | 'out';
+
+export type DartHitResult = {
+  id: string;
+  point: NormalizedPoint;
+  number: number | null;
+  multiplier: 0 | 1 | 2 | 3;
+  area: DartHitArea;
+  score: number;
+};
+
+export type PhotoScoreEntry = {
+  imageUri?: string;
+  boardType: BoardType;
+  calibration: BoardCalibration;
+  hits: DartHitResult[];
+  totalScore: number;
+  bullCount: number;
+  tripleCount: number;
+  doubleCount: number;
+};
+
+export type PracticeInputMethod = 'manual' | 'photoTap';
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -67,6 +106,8 @@ export type PracticeRecord = {
   cricketMarks: number;
   condition: Condition;
   memo: string;
+  inputMethod?: PracticeInputMethod;
+  photoScore?: PhotoScoreEntry;
 };
 
 export type PracticeRecordInput = Omit<PracticeRecord, 'id' | 'date'>;
@@ -79,7 +120,7 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 6;
+  schemaVersion: 7;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];

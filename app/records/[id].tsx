@@ -6,8 +6,10 @@ import { Card } from '../../components/Card';
 import { ScreenShell } from '../../components/ScreenShell';
 import { SectionTitle } from '../../components/SectionTitle';
 import { conditionLabels, gameLabels, machineLabels } from '../../constants/labels';
+import { boardTypeLabels, dartHitAreaLabels } from '../../constants/photoScore';
 import { colors } from '../../constants/theme';
 import { useAppState } from '../../contexts/AppStateContext';
+import type { DartHitResult } from '../../types';
 
 export default function RecordDetailScreen() {
   const router = useRouter();
@@ -59,6 +61,24 @@ export default function RecordDetailScreen() {
         </View>
       </Card>
 
+      {record.photoScore ? (
+        <Card muted>
+          <Text style={styles.cardTitle}>写真スコア記録</Text>
+          <DetailRow label="ボード" value={boardTypeLabels[record.photoScore.boardType]} />
+          <DetailRow label="合計" value={`${record.photoScore.totalScore}点`} />
+          <DetailRow label="Bull" value={`${record.photoScore.bullCount}`} />
+          <DetailRow label="Triple" value={`${record.photoScore.tripleCount}`} />
+          <DetailRow label="Double" value={`${record.photoScore.doubleCount}`} />
+          <View style={styles.hitList}>
+            {record.photoScore.hits.map((hit, index) => (
+              <Text key={hit.id} style={styles.hitText}>
+                {index + 1}. {formatHit(hit)}
+              </Text>
+            ))}
+          </View>
+        </Card>
+      ) : null}
+
       <AppButton label="編集" onPress={() => router.push(`/records/${record.id}/edit`)} />
       <AppButton label="削除" onPress={handleDelete} variant="danger" />
       <AppButton label="分析へ戻る" onPress={() => router.push('/analysis')} variant="secondary" />
@@ -81,6 +101,14 @@ function DetailRow({ label, value }: DetailRowProps) {
   );
 }
 
+function formatHit(hit: DartHitResult) {
+  if (hit.area === 'singleBull' || hit.area === 'doubleBull' || hit.area === 'out') {
+    return `${dartHitAreaLabels[hit.area]} / ${hit.score}点`;
+  }
+
+  return `${hit.number} ${dartHitAreaLabels[hit.area]} / ${hit.score}点`;
+}
+
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('ja-JP', {
     year: 'numeric',
@@ -95,6 +123,11 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 22,
+    fontWeight: '900',
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 18,
     fontWeight: '900',
   },
   detailRow: {
@@ -123,5 +156,15 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 22,
+  },
+  hitList: {
+    gap: 8,
+    marginTop: 16,
+  },
+  hitText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 20,
   },
 });

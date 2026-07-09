@@ -13,7 +13,7 @@ test('validateDataIntegrity passes for bundled constants', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 6', () => {
+test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 7', () => {
   const profile = buildProfile();
   const record = buildRecord();
   const migrated = migrateAppState(
@@ -28,7 +28,7 @@ test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 6', () => {
     },
   );
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 7);
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
@@ -61,7 +61,7 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
     },
   );
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 7);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['beginner-bull-count-up-12']);
   assert.equal(migrated.practiceFilterState.level, 'beginner');
   assert.equal(migrated.practiceFilterState.machineType, 'PHOENIX');
@@ -90,7 +90,7 @@ test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => 
     },
   );
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 7);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
@@ -98,12 +98,21 @@ test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => 
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['advanced-cricket-pressure']);
 });
 
-test('migrateAppState upgrades schemaVersion 5 data and preserves photo score-like fields', () => {
+test('migrateAppState upgrades schemaVersion 6 data and preserves photo score fields', () => {
   const profile = buildProfile();
   const record = {
     ...buildRecord({ id: 'photo-record' }),
     inputMethod: 'photoTap',
     photoScore: {
+      boardType: 'DARTSLIVE_ZERO',
+      calibration: {
+        boardType: 'DARTSLIVE_ZERO',
+        center: { x: 0.5, y: 0.5 },
+        topNumberPoint: { x: 0.5, y: 0.1 },
+        outerRadius: 0.4,
+        ringPreset: 'soft',
+      },
+      hits: [],
       totalScore: 60,
       bullCount: 1,
       tripleCount: 1,
@@ -112,13 +121,14 @@ test('migrateAppState upgrades schemaVersion 5 data and preserves photo score-li
   };
   const migrated = migrateAppState(
     JSON.stringify({
-      schemaVersion: 5,
+      schemaVersion: 6,
       profile,
       records: [record],
       favoritePracticeMenuIds: [],
       practiceFilterState: defaultPracticeFilterState,
       consultHistories: [],
       uiTheme: 'gray',
+      backgroundTheme: 'purple',
     }),
     {
       profile: null,
@@ -128,8 +138,8 @@ test('migrateAppState upgrades schemaVersion 5 data and preserves photo score-li
 
   const migratedRecord = migrated.records[0] as typeof record;
 
-  assert.equal(migrated.schemaVersion, 6);
-  assert.equal(migrated.backgroundTheme, 'white');
+  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.backgroundTheme, 'purple');
   assert.equal(migratedRecord.inputMethod, 'photoTap');
   assert.equal(migratedRecord.photoScore.totalScore, 60);
 });
@@ -142,7 +152,7 @@ test('migrateAppState falls back for broken stored data without crashing', () =>
     records: [legacyRecord],
   });
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 7);
   assert.deepEqual(migrated.profile, legacyProfile);
   assert.equal(migrated.records[0]?.id, 'legacy');
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);

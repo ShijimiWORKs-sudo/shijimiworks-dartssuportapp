@@ -9,7 +9,7 @@ import type {
 } from '../types';
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 
-export const schemaVersion = 6;
+export const schemaVersion = 7;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',

@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { AppButton } from '../components/AppButton';
 import { PracticeRecordForm } from '../components/PracticeRecordForm';
 import { ScreenShell } from '../components/ScreenShell';
 import { SectionTitle } from '../components/SectionTitle';
@@ -27,6 +28,11 @@ export default function RecordScreen() {
             ? `${selectedMenu.title} の記録を残します。`
             : '保存した内容は端末内に残り、分析と記録一覧に反映されます。'
         }
+      />
+      <AppButton
+        label="写真からスコア記録"
+        onPress={() => router.push('/photo-score')}
+        variant="secondary"
       />
       <PracticeRecordForm
         initialPracticeMenu={selectedMenu}

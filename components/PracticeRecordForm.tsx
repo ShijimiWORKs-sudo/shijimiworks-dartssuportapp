@@ -148,6 +148,8 @@ export function PracticeRecordForm({
       cricketMarks: numericCricketMarks,
       condition,
       memo: memo.trim(),
+      inputMethod: initialRecord?.inputMethod ?? 'manual',
+      photoScore: initialRecord?.photoScore,
     });
   };
 
