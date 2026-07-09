@@ -13,6 +13,7 @@ import { getLevelFromRating } from '../constants/levels';
 import type {
   AnalysisSummary,
   AppState,
+  ConsultHistory,
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
@@ -36,10 +37,13 @@ type AppStateContextValue = {
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
+  consultHistories: ConsultHistory[];
   saveProfile: (profile: Omit<UserProfile, 'level'>) => Promise<void>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
+  addConsultHistory: (history: ConsultHistory) => Promise<void>;
+  deleteConsultHistory: (id: string) => Promise<void>;
   toggleFavoritePracticeMenu: (id: string) => Promise<void>;
   isFavoritePracticeMenu: (id: string) => boolean;
   savePracticeFilterState: (filterState: PracticeFilterState) => Promise<void>;
@@ -49,6 +53,7 @@ type AppStateContextValue = {
   getWeeklyPracticeCount: () => number;
   getLatestRecord: () => PracticeRecord | null;
   getAnalysisSummary: () => AnalysisSummary;
+  getConsultHistoryById: (id: string) => ConsultHistory | null;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -58,6 +63,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [records, setRecords] = useState<PracticeRecord[]>([]);
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
+  const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
   const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
     defaultPracticeFilterState,
   );
@@ -86,8 +92,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setRecords(sortRecords(migratedState.records));
         setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
         setPracticeFilterState(migratedState.practiceFilterState);
+        setConsultHistories(sortConsultHistories(migratedState.consultHistories));
 
-        if (!storedAppState || JSON.parse(storedAppState).schemaVersion !== schemaVersion) {
+        if (getStoredSchemaVersion(storedAppState) !== schemaVersion) {
           await persistAppState(migratedState);
         }
       } finally {
@@ -112,12 +119,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         records,
         favoritePracticeMenuIds,
         practiceFilterState,
+        consultHistories,
         ...overrides,
       };
 
       await persistAppState(nextState);
     },
-    [favoritePracticeMenuIds, practiceFilterState, profile, records],
+    [consultHistories, favoritePracticeMenuIds, practiceFilterState, profile, records],
   );
 
   const saveProfile = useCallback(
@@ -183,6 +191,24 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [persistCurrentState, records],
   );
 
+  const addConsultHistory = useCallback(
+    async (history: ConsultHistory) => {
+      const nextHistories = sortConsultHistories([history, ...consultHistories]);
+      setConsultHistories(nextHistories);
+      await persistCurrentState({ consultHistories: nextHistories });
+    },
+    [consultHistories, persistCurrentState],
+  );
+
+  const deleteConsultHistory = useCallback(
+    async (id: string) => {
+      const nextHistories = consultHistories.filter((history) => history.id !== id);
+      setConsultHistories(nextHistories);
+      await persistCurrentState({ consultHistories: nextHistories });
+    },
+    [consultHistories, persistCurrentState],
+  );
+
   const toggleFavoritePracticeMenu = useCallback(
     async (id: string) => {
       const nextIds = isFavoritePracticeMenuId(favoritePracticeMenuIds, id)
@@ -237,6 +263,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [profile, records],
   );
 
+  const getConsultHistoryById = useCallback(
+    (id: string) => consultHistories.find((history) => history.id === id) ?? null,
+    [consultHistories],
+  );
+
   const value = useMemo(
     () => ({
       isLoading,
@@ -244,10 +275,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       records,
       favoritePracticeMenuIds,
       practiceFilterState,
+      consultHistories,
       saveProfile,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
+      addConsultHistory,
+      deleteConsultHistory,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -257,6 +291,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
+      getConsultHistoryById,
     }),
     [
       isLoading,
@@ -264,10 +299,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       records,
       favoritePracticeMenuIds,
       practiceFilterState,
+      consultHistories,
       saveProfile,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
+      addConsultHistory,
+      deleteConsultHistory,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -277,6 +315,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
+      getConsultHistoryById,
     ],
   );
 
@@ -299,9 +338,22 @@ async function persistAppState(appState: AppState) {
     JSON.stringify({
       ...appState,
       records: sortRecords(appState.records),
+      consultHistories: sortConsultHistories(appState.consultHistories),
       practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
     }),
   );
+}
+
+function getStoredSchemaVersion(storedAppState: string | null) {
+  if (!storedAppState) {
+    return null;
+  }
+
+  try {
+    return (JSON.parse(storedAppState) as Partial<AppState>).schemaVersion ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function isFavoritePracticeMenuId(favoritePracticeMenuIds: string[], id: string) {
@@ -310,6 +362,10 @@ function isFavoritePracticeMenuId(favoritePracticeMenuIds: string[], id: string)
 
 function sortRecords(records: PracticeRecord[]) {
   return [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortConsultHistories(histories: ConsultHistory[]) {
+  return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 function getStartOfWeek(date: Date) {

@@ -1,6 +1,12 @@
-import type { AppState, LegacyStoredState, PracticeFilterState, PracticeRecord } from '../types';
+import type {
+  AppState,
+  ConsultHistory,
+  LegacyStoredState,
+  PracticeFilterState,
+  PracticeRecord,
+} from '../types';
 
-export const schemaVersion = 2;
+export const schemaVersion = 3;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -22,6 +28,7 @@ export function migrateAppState(
       records: sortRecords(legacyState.records),
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
       practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
+      consultHistories: sortConsultHistories(legacyState.consultHistories ?? []),
     };
   }
 
@@ -31,6 +38,7 @@ export function migrateAppState(
     records: sortRecords(safeRecords(parsedState.records, legacyState.records)),
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
     practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
+    consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
   };
 }
 
@@ -70,6 +78,14 @@ function safeStringArray(value: string[] | undefined) {
   return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
 }
 
+function safeConsultHistories(value: ConsultHistory[] | undefined) {
+  return Array.isArray(value) ? value : [];
+}
+
 function sortRecords(records: PracticeRecord[]) {
   return [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortConsultHistories(histories: ConsultHistory[]) {
+  return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

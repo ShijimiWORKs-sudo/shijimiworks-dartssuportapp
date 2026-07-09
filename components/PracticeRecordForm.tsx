@@ -70,6 +70,7 @@ export function PracticeRecordForm({
     initialRecord ? String(initialRecord.cricketMarks) : '',
   );
   const [memo, setMemo] = useState(initialRecord?.memo ?? '');
+  const [isMenuSelectorOpen, setIsMenuSelectorOpen] = useState(!initialRecord);
   const [menuSearchText, setMenuSearchText] = useState('');
   const [levelFilter, setLevelFilter] = useState<SkillLevelId | 'all'>('all');
   const [gameFilter, setGameFilter] = useState<PracticeGame | 'all'>('all');
@@ -153,58 +154,75 @@ export function PracticeRecordForm({
   return (
     <>
       <Card muted>
-        <Text style={styles.selectorTitle}>練習メニューを選択</Text>
-        <Text style={styles.selectorBody}>
-          メニュー名、タグ、ゲーム種別、レベルで検索できます。手入力での記録もできます。
-        </Text>
-        <TextInput
-          value={menuSearchText}
-          onChangeText={setMenuSearchText}
-          placeholder="例: ブル / CRICKET / release"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-        <ChoiceGroup
-          title="レベル"
-          items={levelFilters}
-          value={levelFilter}
-          getLabel={(item) => (item === 'all' ? 'すべて' : levelLabels[item])}
-          onChange={setLevelFilter}
-        />
-        <ChoiceGroup
-          title="ゲーム"
-          items={gameFilters}
-          value={gameFilter}
-          getLabel={(item) => (item === 'all' ? 'すべて' : gameLabels[item])}
-          onChange={setGameFilter}
-        />
-        <ChoiceGroup
-          title="機種"
-          items={machineFilters}
-          value={machineFilter}
-          getLabel={(item) => (item === 'all' ? 'すべて' : machineLabels[item])}
-          onChange={setMachineFilter}
-        />
-        <View style={styles.menuList}>
-          {filteredMenus.map((menu) => (
-            <Pressable
-              key={menu.id}
-              accessibilityRole="button"
-              onPress={() => handleSelectMenu(menu)}
-              style={[
-                styles.menuOption,
-                selectedPracticeMenuId === menu.id && styles.menuOptionSelected,
-              ]}
-            >
-              <Text style={styles.menuOptionTitle}>{menu.title}</Text>
-              <Text style={styles.menuOptionMeta}>
-                {levelLabels[menu.level]} /{' '}
-                {menu.gameTypes.map((item) => gameLabels[item]).join('・')} / {menu.durationMinutes}
-                分
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.selectorHeader}>
+          <View style={styles.selectorHeaderText}>
+            <Text style={styles.selectorTitle}>練習メニューを選択</Text>
+            <Text style={styles.selectorBody}>現在: {practiceMenuName}</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setIsMenuSelectorOpen((current) => !current)}
+            style={styles.toggleButton}
+          >
+            <Text style={styles.toggleText}>{isMenuSelectorOpen ? '閉じる' : '開く'}</Text>
+          </Pressable>
         </View>
+
+        {isMenuSelectorOpen ? (
+          <>
+            <Text style={styles.selectorBody}>
+              メニュー名、タグ、ゲーム種別、レベルで検索できます。手入力での記録もできます。
+            </Text>
+            <TextInput
+              value={menuSearchText}
+              onChangeText={setMenuSearchText}
+              placeholder="例: ブル / CRICKET / release"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+            />
+            <ChoiceGroup
+              title="レベル"
+              items={levelFilters}
+              value={levelFilter}
+              getLabel={(item) => (item === 'all' ? 'すべて' : levelLabels[item])}
+              onChange={setLevelFilter}
+            />
+            <ChoiceGroup
+              title="ゲーム"
+              items={gameFilters}
+              value={gameFilter}
+              getLabel={(item) => (item === 'all' ? 'すべて' : gameLabels[item])}
+              onChange={setGameFilter}
+            />
+            <ChoiceGroup
+              title="機種"
+              items={machineFilters}
+              value={machineFilter}
+              getLabel={(item) => (item === 'all' ? 'すべて' : machineLabels[item])}
+              onChange={setMachineFilter}
+            />
+            <View style={styles.menuList}>
+              {filteredMenus.map((menu) => (
+                <Pressable
+                  key={menu.id}
+                  accessibilityRole="button"
+                  onPress={() => handleSelectMenu(menu)}
+                  style={[
+                    styles.menuOption,
+                    selectedPracticeMenuId === menu.id && styles.menuOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.menuOptionTitle}>{menu.title}</Text>
+                  <Text style={styles.menuOptionMeta}>
+                    {levelLabels[menu.level]} /{' '}
+                    {menu.gameTypes.map((item) => gameLabels[item]).join('・')} /{' '}
+                    {menu.durationMinutes}分
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        ) : null}
       </Card>
 
       <Card>
@@ -347,12 +365,35 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '900',
   },
+  selectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectorHeaderText: {
+    flex: 1,
+  },
   selectorBody: {
     marginTop: 8,
     marginBottom: 12,
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  toggleButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  toggleText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '900',
   },
   menuList: {
     gap: 8,

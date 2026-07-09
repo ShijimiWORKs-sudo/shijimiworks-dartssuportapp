@@ -10,6 +10,7 @@ import { consultCategoryLabels, consultSeverityLabels } from '../constants/consu
 import { colors } from '../constants/theme';
 import { useAppState } from '../contexts/AppStateContext';
 import type { ConsultCategory, ConsultSeverity } from '../types';
+import { createConsultHistory } from '../utils/createConsultHistory';
 import { generateConsultAdvice, type ConsultAdviceResult } from '../utils/generateConsultAdvice';
 
 const categories = Object.entries(consultCategoryLabels).map(([value, label]) => ({
@@ -25,7 +26,7 @@ const severities = Object.entries(consultSeverityLabels).map(([value, label]) =>
 export default function ConsultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string }>();
-  const { profile, records } = useAppState();
+  const { addConsultHistory, profile, records } = useAppState();
   const [category, setCategory] = useState<ConsultCategory>(() =>
     normalizeCategory(params.category),
   );
@@ -34,20 +35,27 @@ export default function ConsultScreen() {
   const [result, setResult] = useState<ConsultAdviceResult | null>(null);
   const [error, setError] = useState('');
 
-  const handleConsult = () => {
+  const handleConsult = async () => {
     if (!userText.trim()) {
       setError('悩みを入力してください。');
       return;
     }
 
     setError('');
-    setResult(
-      generateConsultAdvice({
+    const nextResult = generateConsultAdvice({
+      category,
+      severity,
+      userText,
+      profile,
+      practiceRecords: records,
+    });
+    setResult(nextResult);
+    await addConsultHistory(
+      createConsultHistory({
         category,
         severity,
         userText,
-        profile,
-        practiceRecords: records,
+        result: nextResult,
       }),
     );
   };
@@ -96,7 +104,12 @@ export default function ConsultScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </Card>
 
-      <AppButton label="相談する" onPress={handleConsult} />
+      <AppButton label="相談する" onPress={() => void handleConsult()} />
+      <AppButton
+        label="相談履歴を見る"
+        onPress={() => router.push('/consult/history')}
+        variant="secondary"
+      />
 
       {result ? (
         <>

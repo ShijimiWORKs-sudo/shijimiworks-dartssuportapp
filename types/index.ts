@@ -75,11 +75,12 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
+  consultHistories: ConsultHistory[];
 };
 
 export type LegacyStoredState = {
@@ -87,6 +88,7 @@ export type LegacyStoredState = {
   records: PracticeRecord[];
   favoritePracticeMenuIds?: string[];
   practiceFilterState?: PracticeFilterState;
+  consultHistories?: ConsultHistory[];
 };
 
 export type AnalysisSummary = {
@@ -161,8 +163,14 @@ export type ConsultHistory = {
   id: string;
   date: string;
   category: ConsultCategory;
+  severity: ConsultSeverity;
   userText: string;
-  resultAdviceIds: string[];
-  selectedPracticeMenuIds: string[];
-  memo: string;
+  mainAdvice: string;
+  causes: string[];
+  checkPoints: string[];
+  recommendedPracticeMenuIds: string[];
+  relatedKnowledgeIds: string[];
+  cautionText?: string;
+  nextAction: string;
+  memo?: string;
 };

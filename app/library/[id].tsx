@@ -9,6 +9,7 @@ import { consultAdvice } from '../../constants/consultAdvice';
 import { getKnowledgeArticleById } from '../../constants/knowledgeBase';
 import { getPracticeMenuById } from '../../constants/practiceMenus';
 import { colors } from '../../constants/theme';
+import type { ConsultCategory } from '../../types';
 
 const categoryLabels: Record<string, string> = {
   stance: 'スタンス',
@@ -111,13 +112,35 @@ export default function KnowledgeArticleDetailScreen() {
       </Card>
 
       <AppButton
-        label="相談画面へ戻る"
-        onPress={() => router.push('/consult')}
+        label="この内容について相談する"
+        onPress={() =>
+          router.push({
+            pathname: '/consult',
+            params: { category: getConsultCategoryFromArticleCategory(article.category) },
+          })
+        }
         variant="secondary"
       />
       <AppButton label="資料ライブラリへ戻る" onPress={() => router.push('/library')} />
     </ScreenShell>
   );
+}
+
+function getConsultCategoryFromArticleCategory(category: string): ConsultCategory {
+  const mapping: Record<string, ConsultCategory> = {
+    stance: 'stance',
+    grip: 'grip',
+    release: 'release',
+    mental: 'mental',
+    yips: 'yips',
+    routine: 'rhythm',
+    countUp: 'aiming',
+    cricket: 'aiming',
+    zeroOne: 'practicePlan',
+    practicePlan: 'practicePlan',
+  };
+
+  return mapping[category] ?? 'practicePlan';
 }
 
 const styles = StyleSheet.create({
