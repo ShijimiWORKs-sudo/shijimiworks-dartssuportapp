@@ -13,6 +13,8 @@ import { getLevelFromRating } from '../constants/levels';
 import {
   backgroundThemeColors,
   defaultBackgroundTheme,
+  getOnBackgroundMutedTextColor,
+  getOnBackgroundTextColor,
   type ThemeColors,
   themes,
 } from '../constants/theme';
@@ -358,6 +360,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     () => ({
       ...themes[uiTheme],
       background: backgroundThemeColors[backgroundTheme],
+      onBackground: getOnBackgroundTextColor(backgroundTheme),
+      onBackgroundMuted: getOnBackgroundMutedTextColor(backgroundTheme),
     }),
     [backgroundTheme, uiTheme],
   );

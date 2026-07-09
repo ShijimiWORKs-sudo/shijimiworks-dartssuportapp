@@ -1,17 +1,24 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../constants/theme';
+import { useAppState } from '../contexts/AppStateContext';
 
 type SectionTitleProps = {
   title: string;
   subtitle?: string;
+  tone?: 'background' | 'card';
 };
 
-export function SectionTitle({ title, subtitle }: SectionTitleProps) {
+export function SectionTitle({ title, subtitle, tone = 'background' }: SectionTitleProps) {
+  const { theme } = useAppState();
+  const titleColor = tone === 'card' ? theme.onCard : theme.onBackground;
+  const subtitleColor = tone === 'card' ? theme.onCardMuted : theme.onBackgroundMuted;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
+      {subtitle ? (
+        <Text style={[styles.subtitle, { color: subtitleColor }]}>{subtitle}</Text>
+      ) : null}
     </View>
   );
 }
@@ -21,12 +28,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    color: colors.text,
     fontSize: 22,
     fontWeight: '900',
   },
   subtitle: {
-    color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
   },

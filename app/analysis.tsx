@@ -124,12 +124,20 @@ export default function AnalysisScreen() {
       </View>
 
       <Card>
-        <SectionTitle title="スコア推移" subtitle="期間内の直近8件を古い順に表示します。" />
+        <SectionTitle
+          title="スコア推移"
+          subtitle="期間内の直近8件を古い順に表示します。"
+          tone="card"
+        />
         <SimpleBarChart data={scoreChartData} />
       </Card>
 
       <Card>
-        <SectionTitle title="ブル数推移" subtitle="ブル数の変化を軽量なバー表示で確認します。" />
+        <SectionTitle
+          title="ブル数推移"
+          subtitle="ブル数の変化を軽量なバー表示で確認します。"
+          tone="card"
+        />
         <SimpleBarChart data={bullChartData} maxValue={20} />
       </Card>
 

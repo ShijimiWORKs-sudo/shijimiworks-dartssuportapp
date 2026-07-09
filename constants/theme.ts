@@ -5,6 +5,10 @@ export type ThemeColors = {
   surface: string;
   surfaceMuted: string;
   mutedCard: string;
+  onBackground: string;
+  onBackgroundMuted: string;
+  onCard: string;
+  onCardMuted: string;
   primary: string;
   primaryDark: string;
   primarySoft: string;
@@ -41,12 +45,28 @@ export const backgroundThemeColors: Record<BackgroundTheme, string> = background
   {} as Record<BackgroundTheme, string>,
 );
 
+export function getOnBackgroundTextColor(backgroundTheme: BackgroundTheme) {
+  return backgroundTheme === 'black' || backgroundTheme === 'brown' || backgroundTheme === 'purple'
+    ? '#ffffff'
+    : '#111827';
+}
+
+export function getOnBackgroundMutedTextColor(backgroundTheme: BackgroundTheme) {
+  return backgroundTheme === 'black' || backgroundTheme === 'brown' || backgroundTheme === 'purple'
+    ? '#f3f4f6'
+    : '#647067';
+}
+
 export const themes: Record<UiTheme, ThemeColors> = {
   light: {
     background: '#f7fbf8',
     surface: '#ffffff',
     surfaceMuted: '#edf7f0',
     mutedCard: '#edf7f0',
+    onBackground: '#111827',
+    onBackgroundMuted: '#647067',
+    onCard: '#111827',
+    onCardMuted: '#647067',
     primary: '#16a66a',
     primaryDark: '#087243',
     primarySoft: '#dff6e9',
@@ -63,6 +83,10 @@ export const themes: Record<UiTheme, ThemeColors> = {
     surface: '#ffffff',
     surfaceMuted: '#e7ecea',
     mutedCard: '#e7ecea',
+    onBackground: '#111827',
+    onBackgroundMuted: '#667085',
+    onCard: '#111827',
+    onCardMuted: '#667085',
     primary: '#16a66a',
     primaryDark: '#087243',
     primarySoft: '#dff6e9',

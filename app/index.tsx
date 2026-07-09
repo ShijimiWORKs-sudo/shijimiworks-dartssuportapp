@@ -22,7 +22,7 @@ const machines: { label: string; value: DartMachine }[] = [
 
 export default function SetupScreen() {
   const router = useRouter();
-  const { isLoading, saveProfile } = useAppState();
+  const { isLoading, saveProfile, theme } = useAppState();
   const [ratingText, setRatingText] = useState('7');
   const [machine, setMachine] = useState<DartMachine>('DARTSLIVE');
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>([concerns[1]]);
@@ -58,8 +58,8 @@ export default function SetupScreen() {
       <View style={styles.hero}>
         <Image source={logo} resizeMode="contain" style={styles.logo} />
         <View style={styles.heroText}>
-          <Text style={styles.appName}>DartsSupportApp</Text>
-          <Text style={styles.lead}>
+          <Text style={[styles.appName, { color: theme.onBackground }]}>DartsSupportApp</Text>
+          <Text style={[styles.lead, { color: theme.onBackgroundMuted }]}>
             {isLoading
               ? '保存済み設定を確認しています。'
               : 'まずは練習メニューを出すための初期設定をします。'}
@@ -68,7 +68,11 @@ export default function SetupScreen() {
       </View>
 
       <Card>
-        <SectionTitle title="レーティング" subtitle="数字を入れるとレベルを自動判定します。" />
+        <SectionTitle
+          title="レーティング"
+          subtitle="数字を入れるとレベルを自動判定します。"
+          tone="card"
+        />
         <TextInput
           value={ratingText}
           onChangeText={setRatingText}
@@ -87,7 +91,7 @@ export default function SetupScreen() {
       </Card>
 
       <Card>
-        <SectionTitle title="利用機種" />
+        <SectionTitle title="利用機種" tone="card" />
         <View style={styles.chipGrid}>
           {machines.map((item) => (
             <ChoiceChip
@@ -101,7 +105,7 @@ export default function SetupScreen() {
       </Card>
 
       <Card>
-        <SectionTitle title="主な悩み" subtitle="複数選択できます。" />
+        <SectionTitle title="主な悩み" subtitle="複数選択できます。" tone="card" />
         <View style={styles.chipGrid}>
           {concerns.map((item) => (
             <ChoiceChip

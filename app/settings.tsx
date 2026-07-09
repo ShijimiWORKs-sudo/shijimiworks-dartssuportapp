@@ -101,7 +101,11 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       />
 
       <Card>
-        <SectionTitle title="レーティング" subtitle="変更するとレベルを自動再判定します。" />
+        <SectionTitle
+          title="レーティング"
+          subtitle="変更するとレベルを自動再判定します。"
+          tone="card"
+        />
         <TextInput
           value={ratingText}
           onChangeText={(value) => setRatingText(value.replace(/[^\d.]/g, ''))}
@@ -120,7 +124,7 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       </Card>
 
       <Card>
-        <SectionTitle title="利用機種" />
+        <SectionTitle title="利用機種" tone="card" />
         <View style={styles.chipGrid}>
           {machines.map((item) => (
             <ChoiceChip
@@ -134,7 +138,7 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       </Card>
 
       <Card>
-        <SectionTitle title="主な悩み" subtitle="複数選択できます。" />
+        <SectionTitle title="主な悩み" subtitle="複数選択できます。" tone="card" />
         <View style={styles.chipGrid}>
           {concerns.map((item) => (
             <ChoiceChip
@@ -154,7 +158,7 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       </Card>
 
       <Card>
-        <SectionTitle title="表示テーマ" subtitle="実機確認しやすい配色を選べます。" />
+        <SectionTitle title="表示テーマ" subtitle="実機確認しやすい配色を選べます。" tone="card" />
         <View style={styles.chipGrid}>
           {uiThemeOptions.map((item) => (
             <ChoiceChip
@@ -168,7 +172,7 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       </Card>
 
       <Card>
-        <SectionTitle title="背景色" subtitle="アプリ全体の背景に反映されます。" />
+        <SectionTitle title="背景色" subtitle="アプリ全体の背景に反映されます。" tone="card" />
         <View style={styles.backgroundGrid}>
           {backgroundThemeOptions.map((item) => (
             <Pressable
@@ -201,7 +205,11 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
       </Card>
 
       <Card>
-        <SectionTitle title="公開前情報" subtitle="TestFlight提出前に確認するページです。" />
+        <SectionTitle
+          title="公開前情報"
+          subtitle="TestFlight提出前に確認するページです。"
+          tone="card"
+        />
         <View style={styles.legalList}>
           {legalLinks.map((item) => (
             <Pressable

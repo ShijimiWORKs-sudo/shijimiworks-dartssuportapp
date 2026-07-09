@@ -52,8 +52,8 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Image source={logo} resizeMode="contain" style={styles.logo} />
         <View style={styles.headerText}>
-          <Text style={styles.appName}>DartsSupportApp</Text>
-          <Text style={styles.meta}>
+          <Text style={[styles.appName, { color: theme.onBackground }]}>DartsSupportApp</Text>
+          <Text style={[styles.meta, { color: theme.onBackgroundMuted }]}>
             {profile ? levelLabels[profile.level] : 'プロフィール未設定'}
           </Text>
         </View>
@@ -64,6 +64,7 @@ export default function HomeScreen() {
           <SectionTitle
             title="初期設定がまだありません"
             subtitle="レーティングと利用機種を保存すると、ホームと分析に反映されます。"
+            tone="card"
           />
           <View style={styles.setupAction}>
             <AppButton label="初期設定へ戻る" onPress={() => router.push('/')} />
@@ -87,7 +88,11 @@ export default function HomeScreen() {
       </View>
 
       <Card>
-        <SectionTitle title="分析サマリー" subtitle="直近30日の保存記録から表示します。" />
+        <SectionTitle
+          title="分析サマリー"
+          subtitle="直近30日の保存記録から表示します。"
+          tone="card"
+        />
         <View style={styles.analysisSummaryGrid}>
           <View style={styles.analysisSummaryItem}>
             <Text style={styles.analysisSummaryValue}>
@@ -114,7 +119,7 @@ export default function HomeScreen() {
       </Card>
 
       <Card muted>
-        <SectionTitle title="今日のおすすめ練習" subtitle={recommendation.reasonText} />
+        <SectionTitle title="今日のおすすめ練習" subtitle={recommendation.reasonText} tone="card" />
         {recommendedMenu ? (
           <>
             <Text style={styles.recommendTitle}>{recommendedMenu.title}</Text>
@@ -160,7 +165,7 @@ export default function HomeScreen() {
           style={({ pressed }) => pressed && styles.pressed}
         >
           <Card>
-            <SectionTitle title="最新の練習記録" subtitle="タップで詳細を開きます。" />
+            <SectionTitle title="最新の練習記録" subtitle="タップで詳細を開きます。" tone="card" />
             <Text style={styles.latestTitle}>{latestRecord.practiceMenuName}</Text>
             <Text style={styles.latestBody}>
               {formatDate(latestRecord.date)} / {gameLabels[latestRecord.gameType]} / スコア{' '}
@@ -174,7 +179,7 @@ export default function HomeScreen() {
         </Pressable>
       ) : (
         <Card>
-          <SectionTitle title="最新の練習記録" />
+          <SectionTitle title="最新の練習記録" tone="card" />
           <Text style={styles.latestBody}>
             まだ練習記録がありません。記録入力から1件保存しましょう。
           </Text>

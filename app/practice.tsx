@@ -57,6 +57,7 @@ export default function PracticeScreen() {
     resetPracticeFilterState,
     isFavoritePracticeMenu,
     toggleFavoritePracticeMenu,
+    theme,
   } = useAppState();
   const recommendation = recommendPracticeMenus(profile, records);
   const levelFilter = practiceFilterState.level ?? 'all';
@@ -155,7 +156,9 @@ export default function PracticeScreen() {
       />
 
       <View style={styles.resultHeader}>
-        <Text style={styles.resultText}>{filteredMenus.length}件</Text>
+        <Text style={[styles.resultText, { color: theme.onBackgroundMuted }]}>
+          {filteredMenus.length}件
+        </Text>
       </View>
       {filteredMenus.map((menu) => (
         <PracticeMenuCard
@@ -179,9 +182,11 @@ type FilterGroupProps<T extends string> = {
 };
 
 function FilterGroup<T extends string>({ title, items, value, onChange }: FilterGroupProps<T>) {
+  const { theme } = useAppState();
+
   return (
     <View style={styles.filterGroup}>
-      <Text style={styles.filterTitle}>{title}</Text>
+      <Text style={[styles.filterTitle, { color: theme.onBackground }]}>{title}</Text>
       <View style={styles.chipGrid}>
         {items.map((item) => {
           const selected = item.value === value;
