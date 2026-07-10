@@ -37,6 +37,11 @@ import {
   normalizePracticeFilterState,
   schemaVersion,
 } from '../utils/appStateMigration';
+import {
+  addFormPhotoAdviceHistory,
+  deleteFormPhotoAdviceHistory,
+  sortFormPhotoAdviceHistories,
+} from '../utils/formPhotoAdviceHistory';
 
 const appStateStorageKey = 'DartsSupportApp:appState';
 const profileStorageKey = 'DartsSupportApp:userProfile';
@@ -122,7 +127,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
         setPracticeFilterState(migratedState.practiceFilterState);
         setConsultHistories(sortConsultHistories(migratedState.consultHistories));
-        setFormPhotoAdviceResults(sortFormPhotoAdviceResults(migratedState.formPhotoAdviceResults));
+        setFormPhotoAdviceResults(
+          sortFormPhotoAdviceHistories(migratedState.formPhotoAdviceResults),
+        );
         setUiTheme(migratedState.uiTheme);
         setBackgroundTheme(migratedState.backgroundTheme);
 
@@ -308,7 +315,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   const addFormPhotoAdviceResult = useCallback(
     async (result: FormPhotoAdviceResult) => {
-      const nextResults = sortFormPhotoAdviceResults([result, ...formPhotoAdviceResults]);
+      const nextResults = addFormPhotoAdviceHistory(formPhotoAdviceResults, result);
       setFormPhotoAdviceResults(nextResults);
       await persistCurrentState({ formPhotoAdviceResults: nextResults });
     },
@@ -317,7 +324,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   const deleteFormPhotoAdviceResult = useCallback(
     async (id: string) => {
-      const nextResults = formPhotoAdviceResults.filter((result) => result.id !== id);
+      const nextResults = deleteFormPhotoAdviceHistory(formPhotoAdviceResults, id);
       setFormPhotoAdviceResults(nextResults);
       await persistCurrentState({ formPhotoAdviceResults: nextResults });
     },
@@ -491,7 +498,7 @@ async function persistAppState(appState: AppState) {
       ...appState,
       records: sortRecords(appState.records),
       consultHistories: sortConsultHistories(appState.consultHistories),
-      formPhotoAdviceResults: sortFormPhotoAdviceResults(appState.formPhotoAdviceResults),
+      formPhotoAdviceResults: sortFormPhotoAdviceHistories(appState.formPhotoAdviceResults),
       practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
     }),
   );
@@ -519,10 +526,6 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
-function sortFormPhotoAdviceResults(results: FormPhotoAdviceResult[]) {
-  return [...results].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 function getStartOfWeek(date: Date) {

@@ -3,19 +3,19 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AppButton } from '../../components/AppButton';
-import { Card } from '../../components/Card';
-import { ScreenShell } from '../../components/ScreenShell';
-import { SectionTitle } from '../../components/SectionTitle';
+import { AppButton } from '../../../components/AppButton';
+import { Card } from '../../../components/Card';
+import { ScreenShell } from '../../../components/ScreenShell';
+import { SectionTitle } from '../../../components/SectionTitle';
 import {
   formAdviceCategoryLabels,
   formPhotoTypeLabels,
   formSelfCheckAnswerLabels,
   throwingHandLabels,
-} from '../../constants/formPhoto';
-import { getPracticeMenuById } from '../../constants/practiceMenus';
-import { colors } from '../../constants/theme';
-import { useAppState } from '../../contexts/AppStateContext';
+} from '../../../constants/formPhoto';
+import { getPracticeMenuById } from '../../../constants/practiceMenus';
+import { colors } from '../../../constants/theme';
+import { useAppState } from '../../../contexts/AppStateContext';
 import type {
   FormPhotoAdviceResult,
   FormPhotoEntry,
@@ -23,11 +23,11 @@ import type {
   FormSelfCheck,
   FormSelfCheckAnswer,
   ThrowingHand,
-} from '../../types';
+} from '../../../types';
 import {
   generateFormPhotoAdvice,
   getLatestPhotoScoreRecord,
-} from '../../utils/generateFormPhotoAdvice';
+} from '../../../utils/generateFormPhotoAdvice';
 
 const photoTypes: FormPhotoType[] = ['front', 'side', 'releaseAfter'];
 
@@ -295,6 +295,11 @@ export default function FormPhotoConsultScreen() {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <AppButton label="フォーム写真から相談する" onPress={() => void handleGenerate()} />
       <AppButton
+        label="フォーム写真相談履歴を見る"
+        onPress={() => router.push('/consult/form-photo/history')}
+        variant="secondary"
+      />
+      <AppButton
         label="通常のフォーム相談へ戻る"
         onPress={() => router.push('/consult')}
         variant="secondary"
@@ -352,6 +357,11 @@ export default function FormPhotoConsultScreen() {
               ))}
             </>
           ) : null}
+          <AppButton
+            label="保存した履歴を見る"
+            onPress={() => router.push(`/consult/form-photo/history/${result.id}`)}
+            variant="secondary"
+          />
         </>
       ) : null}
 
@@ -360,6 +370,13 @@ export default function FormPhotoConsultScreen() {
           <Text style={styles.cardTitle}>前回のフォーム写真相談</Text>
           <Text style={styles.bodyText}>{formatDate(latestSavedResult.date)}</Text>
           <Text style={styles.bodyText}>{latestSavedResult.summaryText}</Text>
+          <View style={styles.actionStack}>
+            <AppButton
+              label="前回の履歴を見る"
+              onPress={() => router.push(`/consult/form-photo/history/${latestSavedResult.id}`)}
+              variant="secondary"
+            />
+          </View>
         </Card>
       ) : null}
     </ScreenShell>

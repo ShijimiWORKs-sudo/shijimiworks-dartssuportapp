@@ -8,6 +8,7 @@ import {
   getLatestPhotoScoreRecord,
 } from '../utils/generateFormPhotoAdvice';
 import { analyzePhotoScoreGrouping } from '../utils/analyzePhotoScoreGrouping';
+import { getPracticeMenuById } from '../constants/practiceMenus';
 import { buildRecord } from './testHelpers';
 
 const selfCheck: FormSelfCheck = {
@@ -46,6 +47,10 @@ test('generateFormPhotoAdvice returns advice from photos and self check', () => 
   assert.ok(result.adviceTexts.length > 0);
   assert.ok(result.checkPoints.length > 0);
   assert.ok(result.recommendedPracticeMenuIds.includes('beginner-stance-three-sets'));
+  assert.equal(result.photos[0]?.imageUri, 'file:///front.jpg');
+  result.recommendedPracticeMenuIds.forEach((menuId) => {
+    assert.notEqual(getPracticeMenuById(menuId), null);
+  });
 });
 
 test('generateFormPhotoAdvice reflects latest photo score grouping analysis', () => {

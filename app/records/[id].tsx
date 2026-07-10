@@ -120,6 +120,11 @@ export default function RecordDetailScreen() {
               variant="secondary"
             />
             <AppButton
+              label="フォーム写真相談履歴を見る"
+              onPress={() => router.push('/consult/form-photo/history')}
+              variant="secondary"
+            />
+            <AppButton
               label="同じ方法で写真スコアを記録する"
               onPress={() => router.push('/photo-score')}
               variant="secondary"

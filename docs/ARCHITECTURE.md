@@ -149,6 +149,7 @@ Migration方針:
 フォーム写真3枚相談MVP:
 
 - `FormPhotoAdviceResult` として、利き手、3枚写真の種類、自己チェック、直近写真スコア連携、助言、確認ポイント、おすすめ練習IDを保存
+- `formPhotoAdviceResults` は `AppState` 内の配列として AsyncStorage に保存し、履歴一覧・詳細・削除で利用する
 - MVPでは画像そのものの永続保存は必須にせず、結果保存時は写真タイプとメモを中心に残す
 - 画像AIによる骨格推定や自動フォーム診断は行わない
 - `generateFormPhotoAdvice` が自己チェックと直近 `PracticeRecord.photoScore.groupingAnalysis` を組み合わせて固定ロジックで助言する

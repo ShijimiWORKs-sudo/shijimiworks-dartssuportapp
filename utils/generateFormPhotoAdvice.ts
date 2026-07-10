@@ -7,6 +7,7 @@ import type {
   PracticeRecord,
   ThrowingHand,
 } from '../types';
+import { getPracticeMenuById } from '../constants/practiceMenus';
 
 export type GenerateFormPhotoAdviceInput = {
   throwingHand: ThrowingHand;
@@ -50,6 +51,7 @@ export function generateFormPhotoAdvice({
     throwingHand,
     photos: photos.map((photo) => ({
       type: photo.type,
+      imageUri: photo.imageUri,
       note: photo.note,
     })),
     selfCheck,
@@ -59,7 +61,9 @@ export function generateFormPhotoAdvice({
     summaryText: buildSummaryText(categories, analysis, throwingHand),
     adviceTexts: unique(adviceTexts),
     checkPoints: unique(checkPoints),
-    recommendedPracticeMenuIds: Array.from(recommendedPracticeMenuIds).slice(0, 4),
+    recommendedPracticeMenuIds: Array.from(recommendedPracticeMenuIds)
+      .filter((menuId) => getPracticeMenuById(menuId) !== null)
+      .slice(0, 4),
   };
 }
 

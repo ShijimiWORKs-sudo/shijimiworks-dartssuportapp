@@ -9,6 +9,7 @@ import type {
   UiTheme,
 } from '../types';
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
+import { sortFormPhotoAdviceHistories } from './formPhotoAdviceHistory';
 
 export const schemaVersion = 8;
 
@@ -33,7 +34,9 @@ export function migrateAppState(
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
       practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
       consultHistories: sortConsultHistories(legacyState.consultHistories ?? []),
-      formPhotoAdviceResults: sortFormPhotoAdviceResults(legacyState.formPhotoAdviceResults ?? []),
+      formPhotoAdviceResults: sortFormPhotoAdviceHistories(
+        legacyState.formPhotoAdviceResults ?? [],
+      ),
       uiTheme: safeUiTheme(legacyState.uiTheme),
       backgroundTheme: safeBackgroundTheme(legacyState.backgroundTheme),
     };
@@ -46,7 +49,7 @@ export function migrateAppState(
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
     practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
     consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
-    formPhotoAdviceResults: sortFormPhotoAdviceResults(
+    formPhotoAdviceResults: sortFormPhotoAdviceHistories(
       safeFormPhotoAdviceResults(parsedState.formPhotoAdviceResults),
     ),
     uiTheme: safeUiTheme(parsedState.uiTheme),
@@ -118,8 +121,4 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
-function sortFormPhotoAdviceResults(results: FormPhotoAdviceResult[]) {
-  return [...results].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
