@@ -26,7 +26,7 @@ DartsSupportApp MVP v0.1 は、iPhone Expo Goで主要導線を確認するた�
 - 資料ライブラリ検索
 - 資料詳細
 - AsyncStorage ローカル保存
-- schemaVersion 7 migration
+- schemaVersion 8 migration
 - TypeScript / ESLint / Prettier / test / data integrity check
 - GitHub Actions CI
 

@@ -112,6 +112,55 @@ export type PhotoScoreEntry = {
 
 export type PracticeInputMethod = 'manual' | 'photoTap';
 
+export type FormPhotoType = 'front' | 'side' | 'releaseAfter';
+
+export type ThrowingHand = 'right' | 'left';
+
+export type FormSelfCheckAnswer = 'yes' | 'no' | 'unknown';
+
+export type FormSelfCheck = {
+  stanceFeelsStable: FormSelfCheckAnswer;
+  shoulderLineFeelsAligned: FormSelfCheckAnswer;
+  elbowHeightFeelsStable: FormSelfCheckAnswer;
+  releaseFeelsClean: FormSelfCheckAnswer;
+  followThroughGoesToTarget: FormSelfCheckAnswer;
+  bodyOpensEarly: FormSelfCheckAnswer;
+  gripFeelsTooStrong: FormSelfCheckAnswer;
+  feelsRushed: FormSelfCheckAnswer;
+};
+
+export type FormPhotoEntry = {
+  type: FormPhotoType;
+  imageUri?: string;
+  note?: string;
+};
+
+export type FormAdviceCategory =
+  | 'stance'
+  | 'shoulderLine'
+  | 'elbow'
+  | 'release'
+  | 'followThrough'
+  | 'grip'
+  | 'rhythm'
+  | 'aiming'
+  | 'practicePlan';
+
+export type FormPhotoAdviceResult = {
+  id: string;
+  date: string;
+  throwingHand: ThrowingHand;
+  photos: FormPhotoEntry[];
+  selfCheck: FormSelfCheck;
+  linkedPracticeRecordId?: string;
+  linkedPhotoScoreSummary?: string;
+  adviceCategories: FormAdviceCategory[];
+  summaryText: string;
+  adviceTexts: string[];
+  checkPoints: string[];
+  recommendedPracticeMenuIds: string[];
+};
+
 export type PracticeMenu = {
   id: string;
   title: string;
@@ -164,12 +213,13 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 7;
+  schemaVersion: 8;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
+  formPhotoAdviceResults: FormPhotoAdviceResult[];
   uiTheme: UiTheme;
   backgroundTheme: BackgroundTheme;
 };
@@ -180,6 +230,7 @@ export type LegacyStoredState = {
   favoritePracticeMenuIds?: string[];
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];
+  formPhotoAdviceResults?: FormPhotoAdviceResult[];
   uiTheme?: UiTheme;
   backgroundTheme?: BackgroundTheme;
 };

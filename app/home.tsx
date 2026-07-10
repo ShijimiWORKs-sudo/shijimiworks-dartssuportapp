@@ -22,6 +22,7 @@ const menuLinks = [
   { label: '写真スコア記録', href: '/photo-score', helper: '自宅練習を写真から記録' },
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
   { label: 'フォーム相談', href: '/consult', helper: '固定アドバイス確認' },
+  { label: 'フォーム写真相談', href: '/consult/form-photo', helper: '3枚写真と自己チェック' },
   { label: '資料ライブラリ', href: '/library', helper: '検索と関連資料' },
   { label: 'お気に入り練習', href: '/favorites', helper: '登録済みメニュー' },
   { label: '設定を編集', href: '/settings', helper: 'RTと悩みを更新' },

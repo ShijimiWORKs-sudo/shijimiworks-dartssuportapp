@@ -2,6 +2,7 @@ import type {
   AppState,
   BackgroundTheme,
   ConsultHistory,
+  FormPhotoAdviceResult,
   LegacyStoredState,
   PracticeFilterState,
   PracticeRecord,
@@ -9,7 +10,7 @@ import type {
 } from '../types';
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 
-export const schemaVersion = 7;
+export const schemaVersion = 8;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -32,6 +33,7 @@ export function migrateAppState(
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
       practiceFilterState: normalizePracticeFilterState(legacyState.practiceFilterState),
       consultHistories: sortConsultHistories(legacyState.consultHistories ?? []),
+      formPhotoAdviceResults: sortFormPhotoAdviceResults(legacyState.formPhotoAdviceResults ?? []),
       uiTheme: safeUiTheme(legacyState.uiTheme),
       backgroundTheme: safeBackgroundTheme(legacyState.backgroundTheme),
     };
@@ -44,6 +46,9 @@ export function migrateAppState(
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
     practiceFilterState: normalizePracticeFilterState(parsedState.practiceFilterState),
     consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
+    formPhotoAdviceResults: sortFormPhotoAdviceResults(
+      safeFormPhotoAdviceResults(parsedState.formPhotoAdviceResults),
+    ),
     uiTheme: safeUiTheme(parsedState.uiTheme),
     backgroundTheme: safeBackgroundTheme(parsedState.backgroundTheme),
   };
@@ -89,6 +94,10 @@ function safeConsultHistories(value: ConsultHistory[] | undefined) {
   return Array.isArray(value) ? value : [];
 }
 
+function safeFormPhotoAdviceResults(value: FormPhotoAdviceResult[] | undefined) {
+  return Array.isArray(value) ? value : [];
+}
+
 function safeUiTheme(value: unknown): UiTheme {
   return value === 'light' || value === 'gray' ? value : defaultUiTheme;
 }
@@ -109,4 +118,8 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortFormPhotoAdviceResults(results: FormPhotoAdviceResult[]) {
+  return [...results].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

@@ -106,6 +106,11 @@ export default function ConsultScreen() {
 
       <AppButton label="相談する" onPress={() => void handleConsult()} />
       <AppButton
+        label="フォーム写真3枚相談"
+        onPress={() => router.push('/consult/form-photo')}
+        variant="secondary"
+      />
+      <AppButton
         label="相談履歴を見る"
         onPress={() => router.push('/consult/history')}
         variant="secondary"

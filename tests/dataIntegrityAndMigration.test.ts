@@ -13,7 +13,7 @@ test('validateDataIntegrity passes for bundled constants', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 7', () => {
+test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 8', () => {
   const profile = buildProfile();
   const record = buildRecord();
   const migrated = migrateAppState(
@@ -28,10 +28,11 @@ test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 7', () => {
     },
   );
 
-  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.schemaVersion, 8);
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.deepEqual(migrated.formPhotoAdviceResults, []);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
@@ -61,13 +62,14 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
     },
   );
 
-  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.schemaVersion, 8);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['beginner-bull-count-up-12']);
   assert.equal(migrated.practiceFilterState.level, 'beginner');
   assert.equal(migrated.practiceFilterState.machineType, 'PHOENIX');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records[0]?.id, record.id);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.deepEqual(migrated.formPhotoAdviceResults, []);
   assert.equal(migrated.uiTheme, 'light');
   assert.equal(migrated.backgroundTheme, 'white');
 });
@@ -90,12 +92,13 @@ test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => 
     },
   );
 
-  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.schemaVersion, 8);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
   assert.equal(migrated.records[0]?.id, record.id);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['advanced-cricket-pressure']);
+  assert.deepEqual(migrated.formPhotoAdviceResults, []);
 });
 
 test('migrateAppState upgrades schemaVersion 6 data and preserves photo score fields', () => {
@@ -138,10 +141,55 @@ test('migrateAppState upgrades schemaVersion 6 data and preserves photo score fi
 
   const migratedRecord = migrated.records[0] as typeof record;
 
-  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.schemaVersion, 8);
   assert.equal(migrated.backgroundTheme, 'purple');
   assert.equal(migratedRecord.inputMethod, 'photoTap');
   assert.equal(migratedRecord.photoScore.totalScore, 60);
+});
+
+test('migrateAppState upgrades schemaVersion 7 data and preserves form photo advice results', () => {
+  const formPhotoResult = {
+    id: 'form-photo-1',
+    date: '2026-07-10T00:00:00.000Z',
+    throwingHand: 'right',
+    photos: [{ type: 'front', note: '正面' }],
+    selfCheck: {
+      stanceFeelsStable: 'no',
+      shoulderLineFeelsAligned: 'unknown',
+      elbowHeightFeelsStable: 'unknown',
+      releaseFeelsClean: 'no',
+      followThroughGoesToTarget: 'unknown',
+      bodyOpensEarly: 'unknown',
+      gripFeelsTooStrong: 'unknown',
+      feelsRushed: 'unknown',
+    },
+    adviceCategories: ['stance', 'release'],
+    summaryText: '確認します。',
+    adviceTexts: ['足位置を確認します。'],
+    checkPoints: ['同じ角度で撮影する'],
+    recommendedPracticeMenuIds: ['beginner-stance-three-sets'],
+  };
+  const migrated = migrateAppState(
+    JSON.stringify({
+      schemaVersion: 7,
+      profile: buildProfile(),
+      records: [buildRecord()],
+      favoritePracticeMenuIds: [],
+      practiceFilterState: defaultPracticeFilterState,
+      consultHistories: [],
+      formPhotoAdviceResults: [formPhotoResult],
+      uiTheme: 'gray',
+      backgroundTheme: 'white',
+    }),
+    {
+      profile: null,
+      records: [],
+    },
+  );
+
+  assert.equal(migrated.schemaVersion, 8);
+  assert.equal(migrated.formPhotoAdviceResults[0]?.id, 'form-photo-1');
+  assert.equal(migrated.records.length, 1);
 });
 
 test('migrateAppState falls back for broken stored data without crashing', () => {
@@ -152,11 +200,12 @@ test('migrateAppState falls back for broken stored data without crashing', () =>
     records: [legacyRecord],
   });
 
-  assert.equal(migrated.schemaVersion, 7);
+  assert.equal(migrated.schemaVersion, 8);
   assert.deepEqual(migrated.profile, legacyProfile);
   assert.equal(migrated.records[0]?.id, 'legacy');
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.deepEqual(migrated.formPhotoAdviceResults, []);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
 });
@@ -178,6 +227,7 @@ test('migrateAppState fills missing fields from safe defaults', () => {
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
+  assert.deepEqual(migrated.formPhotoAdviceResults, []);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
 });

@@ -23,6 +23,7 @@ import type {
   AppState,
   BackgroundTheme,
   ConsultHistory,
+  FormPhotoAdviceResult,
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
@@ -48,6 +49,7 @@ type AppStateContextValue = {
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
+  formPhotoAdviceResults: FormPhotoAdviceResult[];
   uiTheme: UiTheme;
   backgroundTheme: BackgroundTheme;
   theme: ThemeColors;
@@ -65,6 +67,8 @@ type AppStateContextValue = {
   deletePracticeRecord: (id: string) => Promise<void>;
   addConsultHistory: (history: ConsultHistory) => Promise<void>;
   deleteConsultHistory: (id: string) => Promise<void>;
+  addFormPhotoAdviceResult: (result: FormPhotoAdviceResult) => Promise<void>;
+  deleteFormPhotoAdviceResult: (id: string) => Promise<void>;
   toggleFavoritePracticeMenu: (id: string) => Promise<void>;
   isFavoritePracticeMenu: (id: string) => boolean;
   savePracticeFilterState: (filterState: PracticeFilterState) => Promise<void>;
@@ -75,6 +79,7 @@ type AppStateContextValue = {
   getLatestRecord: () => PracticeRecord | null;
   getAnalysisSummary: () => AnalysisSummary;
   getConsultHistoryById: (id: string) => ConsultHistory | null;
+  getFormPhotoAdviceResultById: (id: string) => FormPhotoAdviceResult | null;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -85,6 +90,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [records, setRecords] = useState<PracticeRecord[]>([]);
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
+  const [formPhotoAdviceResults, setFormPhotoAdviceResults] = useState<FormPhotoAdviceResult[]>([]);
   const [uiTheme, setUiTheme] = useState<UiTheme>('gray');
   const [backgroundTheme, setBackgroundTheme] = useState<BackgroundTheme>(defaultBackgroundTheme);
   const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
@@ -116,6 +122,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
         setPracticeFilterState(migratedState.practiceFilterState);
         setConsultHistories(sortConsultHistories(migratedState.consultHistories));
+        setFormPhotoAdviceResults(sortFormPhotoAdviceResults(migratedState.formPhotoAdviceResults));
         setUiTheme(migratedState.uiTheme);
         setBackgroundTheme(migratedState.backgroundTheme);
 
@@ -145,6 +152,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         favoritePracticeMenuIds,
         practiceFilterState,
         consultHistories,
+        formPhotoAdviceResults,
         uiTheme,
         backgroundTheme,
         ...overrides,
@@ -156,6 +164,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       backgroundTheme,
       consultHistories,
       favoritePracticeMenuIds,
+      formPhotoAdviceResults,
       practiceFilterState,
       profile,
       records,
@@ -297,6 +306,24 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [consultHistories, persistCurrentState],
   );
 
+  const addFormPhotoAdviceResult = useCallback(
+    async (result: FormPhotoAdviceResult) => {
+      const nextResults = sortFormPhotoAdviceResults([result, ...formPhotoAdviceResults]);
+      setFormPhotoAdviceResults(nextResults);
+      await persistCurrentState({ formPhotoAdviceResults: nextResults });
+    },
+    [formPhotoAdviceResults, persistCurrentState],
+  );
+
+  const deleteFormPhotoAdviceResult = useCallback(
+    async (id: string) => {
+      const nextResults = formPhotoAdviceResults.filter((result) => result.id !== id);
+      setFormPhotoAdviceResults(nextResults);
+      await persistCurrentState({ formPhotoAdviceResults: nextResults });
+    },
+    [formPhotoAdviceResults, persistCurrentState],
+  );
+
   const toggleFavoritePracticeMenu = useCallback(
     async (id: string) => {
       const nextIds = isFavoritePracticeMenuId(favoritePracticeMenuIds, id)
@@ -356,6 +383,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [consultHistories],
   );
 
+  const getFormPhotoAdviceResultById = useCallback(
+    (id: string) => formPhotoAdviceResults.find((result) => result.id === id) ?? null,
+    [formPhotoAdviceResults],
+  );
+
   const theme = useMemo(
     () => ({
       ...themes[uiTheme],
@@ -374,6 +406,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
+      formPhotoAdviceResults,
       uiTheme,
       backgroundTheme,
       theme,
@@ -387,6 +420,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       deletePracticeRecord,
       addConsultHistory,
       deleteConsultHistory,
+      addFormPhotoAdviceResult,
+      deleteFormPhotoAdviceResult,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -397,6 +432,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getLatestRecord,
       getAnalysisSummary,
       getConsultHistoryById,
+      getFormPhotoAdviceResultById,
     }),
     [
       isLoading,
@@ -405,6 +441,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
+      formPhotoAdviceResults,
       uiTheme,
       backgroundTheme,
       theme,
@@ -418,6 +455,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       deletePracticeRecord,
       addConsultHistory,
       deleteConsultHistory,
+      addFormPhotoAdviceResult,
+      deleteFormPhotoAdviceResult,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -428,6 +467,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getLatestRecord,
       getAnalysisSummary,
       getConsultHistoryById,
+      getFormPhotoAdviceResultById,
     ],
   );
 
@@ -451,6 +491,7 @@ async function persistAppState(appState: AppState) {
       ...appState,
       records: sortRecords(appState.records),
       consultHistories: sortConsultHistories(appState.consultHistories),
+      formPhotoAdviceResults: sortFormPhotoAdviceResults(appState.formPhotoAdviceResults),
       practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
     }),
   );
@@ -478,6 +519,10 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortFormPhotoAdviceResults(results: FormPhotoAdviceResult[]) {
+  return [...results].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 function getStartOfWeek(date: Date) {

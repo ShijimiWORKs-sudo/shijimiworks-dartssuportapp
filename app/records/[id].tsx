@@ -115,6 +115,11 @@ export default function RecordDetailScreen() {
               variant="secondary"
             />
             <AppButton
+              label="フォーム写真3枚相談へ"
+              onPress={() => router.push('/consult/form-photo')}
+              variant="secondary"
+            />
+            <AppButton
               label="同じ方法で写真スコアを記録する"
               onPress={() => router.push('/photo-score')}
               variant="secondary"
