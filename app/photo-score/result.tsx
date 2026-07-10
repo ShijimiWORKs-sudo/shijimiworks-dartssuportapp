@@ -11,6 +11,7 @@ import { boardTypeLabels, dartHitAreaLabels } from '../../constants/photoScore';
 import { colors } from '../../constants/theme';
 import { useAppState } from '../../contexts/AppStateContext';
 import type { BoardCalibration, DartHitResult, PracticeRecordInput } from '../../types';
+import { analyzePhotoScoreGrouping } from '../../utils/analyzePhotoScoreGrouping';
 import { calculatePhotoScoreSummary } from '../../utils/calculateDartScore';
 import { formatPhotoScoreSource } from '../../utils/formatPhotoScoreSource';
 
@@ -25,6 +26,10 @@ export default function PhotoScoreResultScreen() {
   const parsedCalibration = useMemo(() => parseJson<BoardCalibration>(calibration), [calibration]);
   const parsedHits = useMemo(() => parseJson<DartHitResult[]>(hits) ?? [], [hits]);
   const summary = calculatePhotoScoreSummary(parsedHits);
+  const groupingAnalysis = useMemo(
+    () => (parsedCalibration ? analyzePhotoScoreGrouping(parsedHits, parsedCalibration) : null),
+    [parsedCalibration, parsedHits],
+  );
   const [isSaving, setIsSaving] = useState(false);
   const normalizedImageUri = imageUri ?? '';
   const markers = parsedHits.map((hit, index) => ({
@@ -61,6 +66,7 @@ export default function PhotoScoreResultScreen() {
         bullCount: summary.bullCount,
         tripleCount: summary.tripleCount,
         doubleCount: summary.doubleCount,
+        groupingAnalysis: groupingAnalysis ?? undefined,
       },
     };
 
@@ -125,6 +131,26 @@ export default function PhotoScoreResultScreen() {
           ))}
         </View>
       </Card>
+
+      {groupingAnalysis ? (
+        <Card muted>
+          <Text style={styles.cardTitle}>グルーピング分析</Text>
+          <Text style={styles.analysisSummary}>{groupingAnalysis.summaryText}</Text>
+          <View style={styles.analysisRows}>
+            <Text style={styles.hitText}>
+              中心からの平均距離: {groupingAnalysis.averageDistanceFromBoardCenter}
+            </Text>
+            <Text style={styles.hitText}>まとまり半径: {groupingAnalysis.spreadRadius}</Text>
+          </View>
+          <View style={styles.hitList}>
+            {groupingAnalysis.adviceTexts.map((adviceText, index) => (
+              <Text key={`${adviceText}-${index}`} style={styles.hitText}>
+                {index + 1}. {adviceText}
+              </Text>
+            ))}
+          </View>
+        </Card>
+      ) : null}
 
       <AppButton
         label={isSaving ? '保存中...' : '練習記録へ保存'}
@@ -214,5 +240,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     lineHeight: 21,
+  },
+  analysisSummary: {
+    marginTop: 10,
+    color: colors.primaryDark,
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  analysisRows: {
+    gap: 6,
+    marginTop: 12,
   },
 });

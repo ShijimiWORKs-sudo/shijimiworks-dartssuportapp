@@ -77,6 +77,29 @@ export default function RecordDetailScreen() {
               </Text>
             ))}
           </View>
+          {record.photoScore.groupingAnalysis ? (
+            <View style={styles.analysisBlock}>
+              <Text style={styles.cardTitle}>グルーピング分析</Text>
+              <Text style={styles.analysisSummary}>
+                {record.photoScore.groupingAnalysis.summaryText}
+              </Text>
+              <DetailRow
+                label="中心からの平均距離"
+                value={String(record.photoScore.groupingAnalysis.averageDistanceFromBoardCenter)}
+              />
+              <DetailRow
+                label="まとまり半径"
+                value={String(record.photoScore.groupingAnalysis.spreadRadius)}
+              />
+              <View style={styles.hitList}>
+                {record.photoScore.groupingAnalysis.adviceTexts.map((adviceText, index) => (
+                  <Text key={`${adviceText}-${index}`} style={styles.hitText}>
+                    {index + 1}. {adviceText}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -167,5 +190,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     lineHeight: 20,
+  },
+  analysisBlock: {
+    gap: 8,
+    marginTop: 18,
+  },
+  analysisSummary: {
+    color: colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 21,
   },
 });

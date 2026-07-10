@@ -64,6 +64,7 @@ Expo Router のルート画面を配置します。
 - `searchKnowledgeBase.ts`: 資料検索
 - `detectDartCandidatesFromImage.ts`: 写真スコアの画像解析候補検出入口
 - `photoScoreCandidates.ts`: キャリブレーション候補生成、候補マージ、ヒット生成
+- `analyzePhotoScoreGrouping.ts`: 写真スコア3点のグルーピング、偏り、散り方、助言生成
 - `appStateMigration.ts`: 保存データmigration
 - `validateDataIntegrity.ts`: DB参照整合性チェック
 
@@ -122,6 +123,7 @@ Migration方針:
 
 - 画像そのものの永続保存は必須にしない
 - `BoardCalibration`、タップ座標、`DartHitResult[]`、合計スコア、Bull/Triple/Double数を保存
+- `PhotoScoreGroupingAnalysis` はグループ中心、まとまり半径、上下左右の偏り、縦散り/横散り、助言をoptionalで保存
 - `DartHitResult` には `detectionSource`、`candidateId`、`confidence` をoptionalで保存
 - `detectionSource` は `imageAnalysisCandidate`、`autoCandidate`、`manualTap`、`adjusted` を扱う
 - 分析画面は既存の `score` / `bullCount` を使うため、大きな変更なしで反映される

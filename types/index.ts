@@ -61,6 +61,31 @@ export type PhotoScoreCandidate = {
 
 export type PhotoScoreDetectionMode = 'manual' | 'semiAuto';
 
+export type PhotoScoreVerticalBias = 'high' | 'low' | 'centered' | 'unknown';
+
+export type PhotoScoreHorizontalBias = 'left' | 'right' | 'centered' | 'unknown';
+
+export type PhotoScoreSpreadPattern = 'tight' | 'vertical' | 'horizontal' | 'wide' | 'unknown';
+
+export type PhotoScoreGroupingQuality = 'good' | 'normal' | 'needsWork' | 'unknown';
+
+export type PhotoScoreAdviceCategory =
+  'release' | 'stance' | 'followThrough' | 'grip' | 'aiming' | 'rhythm' | 'mental' | 'practicePlan';
+
+export type PhotoScoreGroupingAnalysis = {
+  centerPoint: NormalizedPoint;
+  spreadRadius: number;
+  averageDistanceFromBoardCenter: number;
+  verticalBias: PhotoScoreVerticalBias;
+  horizontalBias: PhotoScoreHorizontalBias;
+  spreadPattern: PhotoScoreSpreadPattern;
+  groupingQuality: PhotoScoreGroupingQuality;
+  summaryText: string;
+  adviceTexts: string[];
+  adviceCategories: PhotoScoreAdviceCategory[];
+  recommendedPracticeMenuIds: string[];
+};
+
 export type DartHitResult = {
   id: string;
   point: NormalizedPoint;
@@ -82,6 +107,7 @@ export type PhotoScoreEntry = {
   bullCount: number;
   tripleCount: number;
   doubleCount: number;
+  groupingAnalysis?: PhotoScoreGroupingAnalysis;
 };
 
 export type PracticeInputMethod = 'manual' | 'photoTap';
