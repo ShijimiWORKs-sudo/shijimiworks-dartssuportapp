@@ -15,6 +15,13 @@ type CandidateSeed = {
   reason: string;
 };
 
+export type MergePhotoScoreCandidatesOptions = {
+  maxCandidates?: number;
+  minDistance?: number;
+  selectedCandidateIds?: string[];
+  maxSelected?: number;
+};
+
 const candidateSeeds: CandidateSeed[] = [
   {
     id: 'candidate-bull',
@@ -64,13 +71,61 @@ export function generatePhotoScoreCandidates(
   calibration: BoardCalibration,
   selectedCandidateIds: string[] = [],
 ): PhotoScoreCandidate[] {
+  return generateCalibrationBasedCandidates(calibration, selectedCandidateIds);
+}
+
+export function generateCalibrationBasedCandidates(
+  calibration: BoardCalibration,
+  selectedCandidateIds: string[] = [],
+): PhotoScoreCandidate[] {
   return candidateSeeds.map((seed) => ({
     id: seed.id,
     point: pointFromCalibration(calibration, seed.angleOffset, seed.ratio),
     confidence: seed.confidence,
-    reason: seed.reason,
+    reason: `calibration-generated: ${seed.reason}`,
     selected: selectedCandidateIds.includes(seed.id),
+    source: 'autoCandidate',
   }));
+}
+
+export function mergePhotoScoreCandidates(
+  imageCandidates: PhotoScoreCandidate[],
+  calibrationCandidates: PhotoScoreCandidate[],
+  options: MergePhotoScoreCandidatesOptions = {},
+) {
+  const maxCandidates = options.maxCandidates ?? 8;
+  const minDistance = options.minDistance ?? 0.045;
+  const selectedCandidateIds = limitSelectedCandidateIds(
+    options.selectedCandidateIds ?? [],
+    options.maxSelected ?? 3,
+  );
+  const sortedCandidates = [...imageCandidates, ...calibrationCandidates]
+    .map((candidate) => ({
+      ...candidate,
+      selected: selectedCandidateIds.includes(candidate.id) || candidate.selected,
+    }))
+    .sort((a, b) => b.confidence - a.confidence);
+  const mergedCandidates: PhotoScoreCandidate[] = [];
+
+  sortedCandidates.forEach((candidate) => {
+    const isDuplicate = mergedCandidates.some(
+      (mergedCandidate) => getPointDistance(mergedCandidate.point, candidate.point) < minDistance,
+    );
+
+    if (!isDuplicate && mergedCandidates.length < maxCandidates) {
+      mergedCandidates.push(candidate);
+    }
+  });
+
+  return mergedCandidates.map((candidate, index) => ({
+    ...candidate,
+    selected: selectedCandidateIds.includes(candidate.id) || candidate.selected,
+    id: candidate.id || `candidate-${index + 1}`,
+  }));
+}
+
+export function limitSelectedCandidateIds(candidateIds: string[], maxSelected = 3) {
+  return candidateIds.slice(0, maxSelected);
 }
 
 export function buildPhotoScoreHit(
@@ -107,6 +162,10 @@ function pointFromCalibration(
 
 function midpoint(a: number, b: number) {
   return (a + b) / 2;
+}
+
+function getPointDistance(a: NormalizedPoint, b: NormalizedPoint) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 function clamp(value: number, min: number, max: number) {

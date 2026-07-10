@@ -47,7 +47,8 @@ export type BoardCalibration = {
 
 export type DartHitArea = 'single' | 'double' | 'triple' | 'singleBull' | 'doubleBull' | 'out';
 
-export type PhotoScoreDetectionSource = 'autoCandidate' | 'manualTap' | 'adjusted';
+export type PhotoScoreDetectionSource =
+  'autoCandidate' | 'imageAnalysisCandidate' | 'manualTap' | 'adjusted';
 
 export type PhotoScoreCandidate = {
   id: string;
@@ -55,6 +56,7 @@ export type PhotoScoreCandidate = {
   confidence: number;
   reason: string;
   selected: boolean;
+  source?: Extract<PhotoScoreDetectionSource, 'autoCandidate' | 'imageAnalysisCandidate'>;
 };
 
 export type PhotoScoreDetectionMode = 'manual' | 'semiAuto';

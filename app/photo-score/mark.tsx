@@ -17,7 +17,12 @@ import type {
   PhotoScoreDetectionMode,
 } from '../../types';
 import { calculatePhotoScoreSummary } from '../../utils/calculateDartScore';
-import { buildPhotoScoreHit, generatePhotoScoreCandidates } from '../../utils/photoScoreCandidates';
+import { detectDartCandidatesFromImage } from '../../utils/detectDartCandidatesFromImage';
+import {
+  buildPhotoScoreHit,
+  generateCalibrationBasedCandidates,
+  mergePhotoScoreCandidates,
+} from '../../utils/photoScoreCandidates';
 
 export default function PhotoScoreMarkScreen() {
   const router = useRouter();
@@ -32,24 +37,34 @@ export default function PhotoScoreMarkScreen() {
   const [tapMessage, setTapMessage] = useState('');
   const [detectionMode, setDetectionMode] = useState<PhotoScoreDetectionMode>('semiAuto');
   const [activeHitId, setActiveHitId] = useState<string | null>(null);
+  const [imageCandidates, setImageCandidates] = useState<PhotoScoreCandidate[]>([]);
+  const [isDetectingCandidates, setIsDetectingCandidates] = useState(false);
+  const [candidateMessage, setCandidateMessage] = useState('');
   const summary = calculatePhotoScoreSummary(hits);
   const selectedCandidateIds = hits
     .map((hit) => hit.candidateId)
     .filter((candidateId): candidateId is string => Boolean(candidateId));
-  const candidates = useMemo(
+  const calibrationCandidates = useMemo(
     () =>
       parsedCalibration
-        ? generatePhotoScoreCandidates(parsedCalibration, selectedCandidateIds)
+        ? generateCalibrationBasedCandidates(parsedCalibration, selectedCandidateIds)
         : [],
     [parsedCalibration, selectedCandidateIds],
+  );
+  const candidates = useMemo(
+    () =>
+      mergePhotoScoreCandidates(imageCandidates, calibrationCandidates, {
+        maxCandidates: 8,
+        selectedCandidateIds,
+      }),
+    [calibrationCandidates, imageCandidates, selectedCandidateIds],
   );
   const markers = hits.map((hit, index) => ({
     id: hit.id,
     point: hit.point,
     label: String(index + 1),
     selected: hit.id === activeHitId,
-    color:
-      hit.area === 'out' ? colors.danger : hit.area === 'triple' ? colors.warning : colors.primary,
+    color: getHitMarkerColor(hit),
   }));
   const candidateMarkers =
     detectionMode === 'semiAuto'
@@ -58,7 +73,7 @@ export default function PhotoScoreMarkScreen() {
           point: candidate.point,
           label: `候補${index + 1}`,
           selected: candidate.selected,
-          color: colors.info,
+          color: candidate.source === 'imageAnalysisCandidate' ? '#A64A97' : colors.info,
         }))
       : [];
 
@@ -84,13 +99,46 @@ export default function PhotoScoreMarkScreen() {
       parsedCalibration,
       candidate.point,
       nextId,
-      'autoCandidate',
+      candidate.source ?? 'autoCandidate',
       candidate,
     );
 
     setTapMessage('');
     setActiveHitId(nextId);
     setHits((currentHits) => [...currentHits, nextHit]);
+  };
+
+  const detectImageCandidates = async () => {
+    if (!parsedCalibration || isDetectingCandidates) {
+      return;
+    }
+
+    setIsDetectingCandidates(true);
+    setCandidateMessage('候補生成中...');
+
+    const detectedCandidates = await detectDartCandidatesFromImage(
+      normalizedImageUri,
+      parsedCalibration,
+      {
+        maxCandidates: 8,
+        minConfidence: 0.35,
+        enableHeuristicFallback: true,
+      },
+    );
+
+    setImageCandidates(detectedCandidates);
+    setIsDetectingCandidates(false);
+
+    if (detectedCandidates.length === 0) {
+      setCandidateMessage(
+        '画像から候補を検出できませんでした。キャリブレーション候補または手動追加を使ってください。',
+      );
+      return;
+    }
+
+    setCandidateMessage(
+      '画像解析候補を表示しました。候補が外れる場合はドラッグ調整または手動追加してください。',
+    );
   };
 
   const adjustActiveHit = (point: NormalizedPoint) => {
@@ -164,8 +212,28 @@ export default function PhotoScoreMarkScreen() {
           />
         </View>
         <Text style={styles.modeHelper}>
-          候補はキャリブレーション済みボード座標から表示します。候補を選んだ後、選択中の本を写真上でドラッグして微調整できます。
+          画像解析候補を探すか、キャリブレーション候補を使います。候補を選んだ後、選択中の本を写真上でドラッグして微調整できます。
         </Text>
+        <View style={styles.detectActions}>
+          <AppButton
+            label={isDetectingCandidates ? '候補生成中...' : '画像から候補を探す'}
+            onPress={() => void detectImageCandidates()}
+            variant="secondary"
+            disabled={isDetectingCandidates}
+          />
+          <AppButton
+            label="画像候補をリセット"
+            onPress={() => {
+              setImageCandidates([]);
+              setCandidateMessage(
+                '画像候補をリセットしました。キャリブレーション候補を表示します。',
+              );
+            }}
+            variant="secondary"
+            disabled={imageCandidates.length === 0}
+          />
+        </View>
+        {candidateMessage ? <Text style={styles.modeHelper}>{candidateMessage}</Text> : null}
       </Card>
 
       <Card>
@@ -195,7 +263,10 @@ export default function PhotoScoreMarkScreen() {
 
       {detectionMode === 'semiAuto' ? (
         <Card muted>
-          <Text style={styles.summaryTitle}>自動候補</Text>
+          <Text style={styles.summaryTitle}>画像解析候補 / キャリブレーション候補</Text>
+          <Text style={styles.modeHelper}>
+            候補が外れる場合は、選択後に写真上でドラッグ調整するか、写真上を直接タップして手動追加してください。
+          </Text>
           <View style={styles.candidateList}>
             {candidates.map((candidate, index) => (
               <Pressable
@@ -206,7 +277,10 @@ export default function PhotoScoreMarkScreen() {
                 style={[styles.candidateRow, candidate.selected && styles.candidateRowSelected]}
               >
                 <View style={styles.candidateMain}>
-                  <Text style={styles.candidateTitle}>候補{index + 1}</Text>
+                  <Text style={styles.candidateTitle}>
+                    {candidate.source === 'imageAnalysisCandidate' ? '画像候補' : '補助候補'}
+                    {index + 1}
+                  </Text>
                   <Text style={styles.candidateReason}>{candidate.reason}</Text>
                 </View>
                 <Text style={styles.candidateConfidence}>
@@ -299,8 +373,16 @@ function formatHit(hit: DartHitResult) {
 }
 
 function formatSource(hit: DartHitResult) {
+  if (hit.detectionSource === 'imageAnalysisCandidate') {
+    return hit.confidence
+      ? `画像解析候補 / 信頼度 ${Math.round(hit.confidence * 100)}%`
+      : '画像解析候補';
+  }
+
   if (hit.detectionSource === 'autoCandidate') {
-    return '候補から選択';
+    return hit.confidence
+      ? `キャリブレーション候補 / 信頼度 ${Math.round(hit.confidence * 100)}%`
+      : 'キャリブレーション候補';
   }
 
   if (hit.detectionSource === 'adjusted') {
@@ -308,6 +390,26 @@ function formatSource(hit: DartHitResult) {
   }
 
   return '手動タップ';
+}
+
+function getHitMarkerColor(hit: DartHitResult) {
+  if (hit.area === 'out') {
+    return colors.danger;
+  }
+
+  if (hit.detectionSource === 'adjusted') {
+    return colors.warning;
+  }
+
+  if (hit.detectionSource === 'imageAnalysisCandidate') {
+    return '#A64A97';
+  }
+
+  if (hit.detectionSource === 'autoCandidate') {
+    return colors.info;
+  }
+
+  return colors.primary;
 }
 
 function ModeChip({
@@ -392,6 +494,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  detectActions: {
+    gap: 10,
+    marginTop: 12,
   },
   candidateList: {
     gap: 8,

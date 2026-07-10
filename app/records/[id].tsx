@@ -10,6 +10,7 @@ import { boardTypeLabels, dartHitAreaLabels } from '../../constants/photoScore';
 import { colors } from '../../constants/theme';
 import { useAppState } from '../../contexts/AppStateContext';
 import type { DartHitResult } from '../../types';
+import { formatPhotoScoreSource } from '../../utils/formatPhotoScoreSource';
 
 export default function RecordDetailScreen() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function RecordDetailScreen() {
           <View style={styles.hitList}>
             {record.photoScore.hits.map((hit, index) => (
               <Text key={hit.id} style={styles.hitText}>
-                {index + 1}. {formatHit(hit)}
+                {index + 1}. {formatHit(hit)} / {formatPhotoScoreSource(hit)}
               </Text>
             ))}
           </View>

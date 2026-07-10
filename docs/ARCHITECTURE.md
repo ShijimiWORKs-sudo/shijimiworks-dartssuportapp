@@ -62,6 +62,8 @@ Expo Router のルート画面を配置します。
 - `generateConsultAdvice.ts`: 相談回答
 - `createConsultHistory.ts`: 相談履歴生成
 - `searchKnowledgeBase.ts`: 資料検索
+- `detectDartCandidatesFromImage.ts`: 写真スコアの画像解析候補検出入口
+- `photoScoreCandidates.ts`: キャリブレーション候補生成、候補マージ、ヒット生成
 - `appStateMigration.ts`: 保存データmigration
 - `validateDataIntegrity.ts`: DB参照整合性チェック
 
@@ -120,4 +122,15 @@ Migration方針:
 
 - 画像そのものの永続保存は必須にしない
 - `BoardCalibration`、タップ座標、`DartHitResult[]`、合計スコア、Bull/Triple/Double数を保存
+- `DartHitResult` には `detectionSource`、`candidateId`、`confidence` をoptionalで保存
+- `detectionSource` は `imageAnalysisCandidate`、`autoCandidate`、`manualTap`、`adjusted` を扱う
 - 分析画面は既存の `score` / `bullCount` を使うため、大きな変更なしで反映される
+
+写真スコア候補フロー:
+
+1. `detectDartCandidatesFromImage` が画像URIとキャリブレーションを受け取り、画像解析候補を返す
+2. Expo Goでは安定したピクセル取得を行わず、失敗時は空配列で返す
+3. `generateCalibrationBasedCandidates` がボード幾何ベースの補助候補を返す
+4. `mergePhotoScoreCandidates` が画像解析候補を優先し、近い候補を重複除去して最大件数へ制限する
+5. ユーザーが候補を選択し、必要に応じて写真上でドラッグ微調整する
+6. 将来OpenCV、ML Kit、Vision系へ移行する場合は `detectDartCandidatesFromImage` の内部を差し替える

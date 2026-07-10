@@ -12,6 +12,7 @@ import { colors } from '../../constants/theme';
 import { useAppState } from '../../contexts/AppStateContext';
 import type { BoardCalibration, DartHitResult, PracticeRecordInput } from '../../types';
 import { calculatePhotoScoreSummary } from '../../utils/calculateDartScore';
+import { formatPhotoScoreSource } from '../../utils/formatPhotoScoreSource';
 
 export default function PhotoScoreResultScreen() {
   const router = useRouter();
@@ -119,7 +120,7 @@ export default function PhotoScoreResultScreen() {
         <View style={styles.hitList}>
           {parsedHits.map((hit, index) => (
             <Text key={hit.id} style={styles.hitText}>
-              {index + 1}. {formatHit(hit)}
+              {index + 1}. {formatHit(hit)} / {formatPhotoScoreSource(hit)}
             </Text>
           ))}
         </View>
