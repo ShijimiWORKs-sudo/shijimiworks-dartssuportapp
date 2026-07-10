@@ -64,7 +64,10 @@ export default function RecordDetailScreen() {
 
       {record.photoScore ? (
         <Card muted>
-          <Text style={styles.cardTitle}>写真スコア記録</Text>
+          <View style={styles.badgeRow}>
+            <Text style={styles.photoBadge}>写真スコア記録</Text>
+          </View>
+          <Text style={styles.cardTitle}>写真スコア内訳</Text>
           <DetailRow label="ボード" value={boardTypeLabels[record.photoScore.boardType]} />
           <DetailRow label="合計" value={`${record.photoScore.totalScore}点`} />
           <DetailRow label="Bull" value={`${record.photoScore.bullCount}`} />
@@ -100,6 +103,23 @@ export default function RecordDetailScreen() {
               </View>
             </View>
           ) : null}
+          <View style={styles.photoActions}>
+            <AppButton
+              label="この結果について相談する"
+              onPress={() =>
+                router.push({
+                  pathname: '/consult',
+                  params: { category: 'release' },
+                })
+              }
+              variant="secondary"
+            />
+            <AppButton
+              label="同じ方法で写真スコアを記録する"
+              onPress={() => router.push('/photo-score')}
+              variant="secondary"
+            />
+          </View>
         </Card>
       ) : null}
 
@@ -154,6 +174,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  photoBadge: {
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    color: colors.primaryDark,
+    backgroundColor: colors.primarySoft,
+    fontSize: 12,
+    fontWeight: '900',
+  },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -200,5 +234,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     lineHeight: 21,
+  },
+  photoActions: {
+    gap: 10,
+    marginTop: 18,
   },
 });

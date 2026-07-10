@@ -12,8 +12,8 @@ Expo Router の画面一覧です。
 | `/record`                | 練習記録入力       | 練習メニュー検索/選択、手入力、写真スコア記録導線、記録保存        | `/analysis`, `/photo-score`                                                                             |
 | `/photo-score`           | 写真スコア開始     | 写真撮影/選択、対象ボード選択                                      | `/photo-score/calibrate`, `/record`                                                                     |
 | `/photo-score/calibrate` | ボード設定         | 中心、20方向、外周半径の手動キャリブレーション                     | `/photo-score/mark`, `/photo-score`                                                                     |
-| `/photo-score/mark`      | 位置タップ         | ダーツ3本の刺さり位置タップ、スコア自動判定                        | `/photo-score/result`, `/photo-score`                                                                   |
-| `/photo-score/result`    | 写真スコア結果     | 合計、Bull、Triple、Double確認、練習記録保存                       | `/analysis`, `/photo-score`                                                                             |
+| `/photo-score/mark`      | 位置タップ         | 候補選択、手動追加、ドラッグ微調整、スコア自動判定                 | `/photo-score/result`, `/photo-score`                                                                   |
+| `/photo-score/result`    | 写真スコア結果     | 合計、Bull、Triple、Double、グルーピング分析、練習記録保存         | `/analysis`, `/photo-score/mark`, `/photo-score`                                                        |
 | `/records`               | 練習記録一覧       | 全記録一覧、簡易集計、写真スコア記録導線                           | `/records/[id]`, `/record`, `/photo-score`                                                              |
 | `/records/[id]`          | 練習記録詳細       | 保存済み記録の詳細、編集、削除                                     | `/records/[id]/edit`, `/records`, `/analysis`                                                           |
 | `/records/[id]/edit`     | 練習記録編集       | 既存記録の編集保存                                                 | `/records/[id]`                                                                                         |

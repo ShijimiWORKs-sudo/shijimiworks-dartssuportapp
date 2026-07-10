@@ -74,8 +74,22 @@ export default function PhotoScoreStartScreen() {
     <ScreenShell>
       <SectionTitle
         title="写真スコア記録"
-        subtitle="写真上で中心、20方向、外周、3本の刺さり位置をタップして記録します。"
+        subtitle="写真上で位置を確認・調整して、スコアとグルーピング傾向を保存します。"
       />
+
+      <Card muted>
+        <Text style={styles.cardTitle}>写真スコア記録の流れ</Text>
+        <View style={styles.flowList}>
+          <FlowStep index={1} text="ボード写真を用意" />
+          <FlowStep index={2} text="中心・20方向・外周を合わせる" />
+          <FlowStep index={3} text="3本の位置を選ぶ" />
+          <FlowStep index={4} text="結果とアドバイスを保存" />
+        </View>
+        <Text style={styles.bodyText}>
+          完全自動採点ではありません。候補が外れる場合は写真上で調整できます。DARTSLIVE
+          HOME以外の自宅練習ボードも、写真と手動補正で記録できます。
+        </Text>
+      </Card>
 
       <Card>
         <Text style={styles.cardTitle}>対象ボード</Text>
@@ -98,25 +112,36 @@ export default function PhotoScoreStartScreen() {
       <Card>
         <Text style={styles.cardTitle}>ボード写真</Text>
         <Text style={styles.bodyText}>
-          MVPでは画像自体の永続保存は行わず、タップ座標、キャリブレーション、判定結果を保存します。
+          MVPでは写真そのものを永続保存せず、タップ座標、キャリブレーション、判定結果、グルーピング分析を保存します。
         </Text>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} resizeMode="cover" style={styles.preview} />
-        ) : null}
+          <Image source={{ uri: imageUri }} resizeMode="contain" style={styles.preview} />
+        ) : (
+          <Text style={styles.noticeText}>先に写真を選択または撮影してください。</Text>
+        )}
         <View style={styles.actionStack}>
-          <AppButton label="写真を選択" onPress={() => void pickImage()} variant="secondary" />
-          <AppButton label="カメラで撮影" onPress={() => void takePhoto()} variant="secondary" />
+          <AppButton label="写真を選択" onPress={() => void pickImage()} />
+          <AppButton label="カメラで撮影" onPress={() => void takePhoto()} />
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </Card>
 
-      <AppButton label="キャリブレーションへ" onPress={startCalibration} />
+      <AppButton label="キャリブレーションへ" onPress={startCalibration} disabled={!imageUri} />
       <AppButton
         label="記録入力へ戻る"
         onPress={() => router.push('/record')}
         variant="secondary"
       />
     </ScreenShell>
+  );
+}
+
+function FlowStep({ index, text }: { index: number; text: string }) {
+  return (
+    <View style={styles.flowStep}>
+      <Text style={styles.flowIndex}>{index}</Text>
+      <Text style={styles.flowText}>{text}</Text>
+    </View>
   );
 }
 
@@ -131,6 +156,38 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  noticeText: {
+    marginTop: 12,
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  flowList: {
+    gap: 10,
+    marginTop: 14,
+  },
+  flowStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  flowIndex: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    color: '#ffffff',
+    backgroundColor: colors.primary,
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 28,
+    textAlign: 'center',
+  },
+  flowText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   chipGrid: {
     flexDirection: 'row',
@@ -161,7 +218,7 @@ const styles = StyleSheet.create({
   },
   preview: {
     width: '100%',
-    height: 180,
+    height: 220,
     marginTop: 14,
     borderRadius: 8,
     backgroundColor: colors.surfaceMuted,

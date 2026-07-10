@@ -26,13 +26,19 @@ import {
 
 export default function PhotoScoreMarkScreen() {
   const router = useRouter();
-  const { calibration, imageUri } = useLocalSearchParams<{
+  const {
+    calibration,
+    hits: hitsParam,
+    imageUri,
+  } = useLocalSearchParams<{
     calibration?: string;
+    hits?: string;
     imageUri?: string;
   }>();
   const normalizedImageUri = imageUri ?? '';
   const parsedCalibration = useMemo(() => parseCalibration(calibration), [calibration]);
-  const [hits, setHits] = useState<DartHitResult[]>([]);
+  const initialHits = useMemo(() => parseHits(hitsParam), [hitsParam]);
+  const [hits, setHits] = useState<DartHitResult[]>(initialHits);
   const [isExpanded, setIsExpanded] = useState(false);
   const [tapMessage, setTapMessage] = useState('');
   const [detectionMode, setDetectionMode] = useState<PhotoScoreDetectionMode>('semiAuto');
@@ -194,21 +200,40 @@ export default function PhotoScoreMarkScreen() {
     <ScreenShell>
       <SectionTitle
         title="刺さった位置を選択"
-        subtitle={`半自動候補を選ぶか、写真上を手動タップします。3本中 ${hits.length} 本を記録しました。`}
+        subtitle="候補から選ぶ、写真上を手動タップする、選択点をドラッグ調整する、の順で進めます。"
       />
+
+      <Card muted>
+        <Text style={styles.progressTitle}>{hits.length} / 3本 選択済み</Text>
+        <Text style={styles.modeHelper}>
+          {hits.length < 3
+            ? '3本選択すると結果へ進めます。候補が違う場合は手動で写真上をタップしてください。'
+            : '3本揃いました。必要なら点を選んでドラッグ調整してから結果へ進みます。'}
+        </Text>
+      </Card>
 
       <Card>
         <Text style={styles.summaryTitle}>入力モード</Text>
         <View style={styles.modeRow}>
           <ModeChip
-            label="半自動候補"
+            label="画像候補から選ぶ"
             selected={detectionMode === 'semiAuto'}
             onPress={() => setDetectionMode('semiAuto')}
           />
           <ModeChip
-            label="手動タップ"
+            label="手動で追加"
             selected={detectionMode === 'manual'}
             onPress={() => setDetectionMode('manual')}
+          />
+          <ModeChip
+            label="選択点を調整"
+            selected={Boolean(activeHitId)}
+            onPress={() => {
+              const latestHit = hits[hits.length - 1];
+              if (latestHit) {
+                setActiveHitId(latestHit.id);
+              }
+            }}
           />
         </View>
         <Text style={styles.modeHelper}>
@@ -222,7 +247,7 @@ export default function PhotoScoreMarkScreen() {
             disabled={isDetectingCandidates}
           />
           <AppButton
-            label="画像候補をリセット"
+            label="候補をリセット"
             onPress={() => {
               setImageCandidates([]);
               setCandidateMessage(
@@ -253,7 +278,7 @@ export default function PhotoScoreMarkScreen() {
           onInvalidPress={() => setTapMessage('写真の上をタップしてください。')}
           helperText={
             activeHitId
-              ? '選択中の番号を写真上でドラッグすると位置を微調整できます。手動追加する場合は刺さった先端位置をタップしてください。'
+              ? 'ドラッグで調整できます。動かすと再判定され、微調整済みとして表示します。'
               : '候補を選ぶか、ダーツが刺さった先端位置をタップしてください。'
           }
           isExpanded={isExpanded}
@@ -268,50 +293,67 @@ export default function PhotoScoreMarkScreen() {
             候補が外れる場合は、選択後に写真上でドラッグ調整するか、写真上を直接タップして手動追加してください。
           </Text>
           <View style={styles.candidateList}>
-            {candidates.map((candidate, index) => (
-              <Pressable
-                key={candidate.id}
-                accessibilityRole="button"
-                disabled={candidate.selected || hits.length >= 3}
-                onPress={() => selectCandidate(candidate)}
-                style={[styles.candidateRow, candidate.selected && styles.candidateRowSelected]}
-              >
-                <View style={styles.candidateMain}>
-                  <Text style={styles.candidateTitle}>
-                    {candidate.source === 'imageAnalysisCandidate' ? '画像候補' : '補助候補'}
-                    {index + 1}
+            {candidates.length === 0 ? (
+              <Text style={styles.warningText}>
+                候補を検出できませんでした。手動で位置を追加してください。
+              </Text>
+            ) : (
+              candidates.map((candidate, index) => (
+                <Pressable
+                  key={candidate.id}
+                  accessibilityRole="button"
+                  disabled={candidate.selected || hits.length >= 3}
+                  onPress={() => selectCandidate(candidate)}
+                  style={[styles.candidateRow, candidate.selected && styles.candidateRowSelected]}
+                >
+                  <View style={styles.candidateMain}>
+                    <Text style={styles.candidateTitle}>
+                      {candidate.source === 'imageAnalysisCandidate' ? '画像候補' : '補助候補'}
+                      {index + 1}
+                    </Text>
+                    <Text style={styles.candidateReason}>{candidate.reason}</Text>
+                  </View>
+                  <Text style={styles.candidateConfidence}>
+                    {candidate.selected
+                      ? '選択済み'
+                      : `信頼度 ${Math.round(candidate.confidence * 100)}%`}
                   </Text>
-                  <Text style={styles.candidateReason}>{candidate.reason}</Text>
-                </View>
-                <Text style={styles.candidateConfidence}>
-                  {candidate.selected ? '選択済み' : `${Math.round(candidate.confidence * 100)}%`}
-                </Text>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))
+            )}
           </View>
+          {candidates.length >= 3 ? (
+            <Text style={styles.modeHelper}>
+              正しい3本を選び、必要ならドラッグで位置を調整してください。
+            </Text>
+          ) : null}
         </Card>
       ) : null}
 
       <Card muted>
-        <Text style={styles.summaryTitle}>現在の判定</Text>
+        <Text style={styles.summaryTitle}>選択済みの3本</Text>
         <Text style={styles.summaryText}>
           合計 {summary.totalScore} / Bull {summary.bullCount} / Triple {summary.tripleCount} /
           Double {summary.doubleCount}
         </Text>
         <View style={styles.hitList}>
-          {hits.map((hit, index) => (
-            <Pressable
-              key={hit.id}
-              accessibilityRole="button"
-              onPress={() => setActiveHitId(hit.id)}
-              style={[styles.hitRow, activeHitId === hit.id && styles.hitRowSelected]}
-            >
-              <Text style={styles.hitText}>
-                {index + 1}. {formatHit(hit)}
-              </Text>
-              <Text style={styles.hitSource}>{formatSource(hit)}</Text>
-            </Pressable>
-          ))}
+          {hits.length === 0 ? (
+            <Text style={styles.hitText}>まだ選択されていません。</Text>
+          ) : (
+            hits.map((hit, index) => (
+              <Pressable
+                key={hit.id}
+                accessibilityRole="button"
+                onPress={() => setActiveHitId(hit.id)}
+                style={[styles.hitRow, activeHitId === hit.id && styles.hitRowSelected]}
+              >
+                <Text style={styles.hitText}>
+                  {index + 1}本目：{formatHit(hit)}
+                </Text>
+                <Text style={styles.hitSource}>{formatSource(hit)}</Text>
+              </Pressable>
+            ))
+          )}
         </View>
       </Card>
 
@@ -342,6 +384,9 @@ export default function PhotoScoreMarkScreen() {
           disabled={hits.length === 0}
         />
         <AppButton label="結果を見る" onPress={goResult} disabled={hits.length !== 3} />
+        {hits.length !== 3 ? (
+          <Text style={styles.warningText}>3本選択すると結果へ進めます。</Text>
+        ) : null}
         <AppButton
           label="キャリブレーションへ戻る"
           onPress={() => router.replace('/photo-score')}
@@ -361,6 +406,19 @@ function parseCalibration(value: string | undefined): BoardCalibration | null {
     return JSON.parse(value) as BoardCalibration;
   } catch {
     return null;
+  }
+}
+
+function parseHits(value: string | undefined): DartHitResult[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(value) as DartHitResult[];
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
   }
 }
 
@@ -386,10 +444,10 @@ function formatSource(hit: DartHitResult) {
   }
 
   if (hit.detectionSource === 'adjusted') {
-    return '手動微調整済み';
+    return `調整済み：${formatHit(hit)}`;
   }
 
-  return '手動タップ';
+  return '手動追加';
 }
 
 function getHitMarkerColor(hit: DartHitResult) {
@@ -439,6 +497,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 10,
+  },
+  progressTitle: {
+    color: colors.primaryDark,
+    fontSize: 20,
+    fontWeight: '900',
   },
   stepTitle: {
     color: colors.text,

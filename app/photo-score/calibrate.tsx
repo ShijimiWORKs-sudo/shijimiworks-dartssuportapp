@@ -14,14 +14,17 @@ import { getDistance } from '../../utils/calculateDartScore';
 
 const steps = [
   {
-    title: '中心をタップ',
+    shortTitle: '中心',
+    title: 'ボード中心をタップ',
     helper: 'ブルの中心をタップしてください。',
   },
   {
-    title: '20方向をタップ',
+    shortTitle: '20方向',
+    title: '20の方向をタップ',
     helper: '20の中心方向、または20セクターの真ん中をタップしてください。',
   },
   {
+    shortTitle: '外周',
     title: '外周をタップ',
     helper: 'ダブル外側の外周位置をタップしてください。',
   },
@@ -103,6 +106,23 @@ export default function PhotoScoreCalibrateScreen() {
         subtitle={`${boardTypeLabels[normalizedBoardType]} / ${points.length}/3 点を設定`}
       />
 
+      <Card muted>
+        <Text style={styles.stepProgress}>Step {Math.min(points.length + 1, 3)} / 3</Text>
+        <Text style={styles.currentStepTitle}>
+          {points.length >= 3 ? '中心・20方向・外周の設定が完了しました' : currentStep.title}
+        </Text>
+        <Text style={styles.bodyText}>
+          {points.length >= 3 ? '次へ進んで3本の刺さり位置を選びます。' : currentStep.helper}
+        </Text>
+        <View style={styles.checkList}>
+          {steps.map((step, index) => (
+            <Text key={step.shortTitle} style={styles.checkText}>
+              {points[index] ? '✓' : '○'} {step.shortTitle}
+            </Text>
+          ))}
+        </View>
+      </Card>
+
       <Card>
         <View style={styles.stepHeader}>
           <Text style={styles.stepTitle}>
@@ -111,6 +131,11 @@ export default function PhotoScoreCalibrateScreen() {
           <Text style={styles.stepCount}>{points.length}/3</Text>
         </View>
         <Text style={styles.bodyText}>1. 中心をタップ / 2. 20方向をタップ / 3. 外周をタップ</Text>
+        <View style={styles.legendRow}>
+          <LegendDot color={colors.primary} label="中心" />
+          <LegendDot color={colors.info} label="20方向" />
+          <LegendDot color={colors.warning} label="外周" />
+        </View>
         <PhotoBoardCanvas
           imageUri={normalizedImageUri}
           markers={markers}
@@ -154,6 +179,9 @@ export default function PhotoScoreCalibrateScreen() {
           disabled={points.length === 0}
         />
         <AppButton label="3本の位置をタップへ" onPress={goNext} disabled={!calibration} />
+        {!calibration ? (
+          <Text style={styles.warningText}>中心・20方向・外周をすべて設定してください。</Text>
+        ) : null}
         <AppButton
           label="写真選択へ戻る"
           onPress={() => router.replace('/photo-score')}
@@ -164,7 +192,38 @@ export default function PhotoScoreCalibrateScreen() {
   );
 }
 
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  stepProgress: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  currentStepTitle: {
+    marginTop: 6,
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  checkList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  checkText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,6 +245,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
   },
   warningText: {
     marginTop: 10,
