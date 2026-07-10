@@ -12,8 +12,8 @@ export async function detectDartCandidatesFromImage(
   calibration: BoardCalibration,
   options: DetectDartCandidatesOptions = {},
 ): Promise<PhotoScoreCandidate[]> {
-  const maxCandidates = options.maxCandidates ?? 8;
-  const minConfidence = options.minConfidence ?? 0.3;
+  const maxCandidates = options.maxCandidates ?? 5;
+  const minConfidence = options.minConfidence ?? 0.45;
 
   if (!imageUri.trim() || !isValidCalibration(calibration)) {
     return [];
@@ -28,16 +28,16 @@ export async function detectDartCandidatesFromImage(
     }
 
     return generateCalibrationBasedCandidates(calibration)
-      .slice(0, maxCandidates)
       .map((candidate, index) => ({
         ...candidate,
         id: `image-analysis-${index + 1}`,
-        confidence: Math.max(minConfidence, candidate.confidence - 0.12),
+        confidence: Math.min(0.72, candidate.confidence - 0.12),
         reason: toImageAnalysisReason(candidate.reason, index),
         selected: false,
         source: 'imageAnalysisCandidate' as const,
       }))
-      .filter((candidate) => candidate.confidence >= minConfidence);
+      .filter((candidate) => candidate.confidence >= minConfidence)
+      .slice(0, maxCandidates);
   } catch {
     return [];
   }

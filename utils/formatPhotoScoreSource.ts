@@ -2,10 +2,10 @@ import type { DartHitResult } from '../types';
 
 export function formatPhotoScoreSource(hit: DartHitResult) {
   const confidenceText =
-    typeof hit.confidence === 'number' ? ` / 信頼度 ${Math.round(hit.confidence * 100)}%` : '';
+    typeof hit.confidence === 'number' ? ` / 目安 ${Math.round(hit.confidence * 100)}%` : '';
 
   if (hit.detectionSource === 'imageAnalysisCandidate') {
-    return `画像解析候補${confidenceText}`;
+    return `自動候補β${confidenceText}`;
   }
 
   if (hit.detectionSource === 'autoCandidate') {

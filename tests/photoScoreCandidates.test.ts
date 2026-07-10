@@ -115,6 +115,7 @@ test('detectDartCandidatesFromImage can return image analysis fallback candidate
 
   assert.equal(candidates.length, 3);
   assert.equal(candidates[0].source, 'imageAnalysisCandidate');
+  assert.equal(candidates[0].selected, false);
   assert.match(candidates[0].reason, /candidate/);
 });
 

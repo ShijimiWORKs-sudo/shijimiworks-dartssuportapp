@@ -62,7 +62,7 @@ Expo Router のルート画面を配置します。
 - `generateConsultAdvice.ts`: 相談回答
 - `createConsultHistory.ts`: 相談履歴生成
 - `searchKnowledgeBase.ts`: 資料検索
-- `detectDartCandidatesFromImage.ts`: 写真スコアの画像解析候補検出入口
+- `detectDartCandidatesFromImage.ts`: 写真スコアの自動候補β検出入口
 - `photoScoreCandidates.ts`: キャリブレーション候補生成、候補マージ、ヒット生成
 - `analyzePhotoScoreGrouping.ts`: 写真スコア3点のグルーピング、偏り、散り方、助言生成
 - `appStateMigration.ts`: 保存データmigration
@@ -130,9 +130,14 @@ Migration方針:
 
 写真スコア候補フロー:
 
-1. `detectDartCandidatesFromImage` が画像URIとキャリブレーションを受け取り、画像解析候補を返す
-2. Expo Goでは安定したピクセル取得を行わず、失敗時は空配列で返す
+1. `detectDartCandidatesFromImage` が画像URIとキャリブレーションを受け取り、自動候補βを返す
+2. Expo Goでは安定したピクセル取得を行わず、現在は軽量な候補生成とフォールバックを使う
 3. `generateCalibrationBasedCandidates` がボード幾何ベースの補助候補を返す
-4. `mergePhotoScoreCandidates` が画像解析候補を優先し、近い候補を重複除去して最大件数へ制限する
-5. ユーザーが候補を選択し、必要に応じて写真上でドラッグ微調整する
-6. 将来OpenCV、ML Kit、Vision系へ移行する場合は `detectDartCandidatesFromImage` の内部を差し替える
+4. `mergePhotoScoreCandidates` が自動候補βと補助候補を統合し、近い候補を重複除去して最大件数へ制限する
+5. ユーザーが候補を選択するか、手動で刺さった先端位置を追加し、ドラッグまたは十字ボタンで微調整する
+6. 最終的な採点は、ユーザーが選択・調整した3点だけで行う
+7. 将来OpenCV、ML Kit、TensorFlow Lite、Core ML / Visionへ移行する場合は `detectDartCandidatesFromImage` の内部を差し替える
+8. 本格的な画像認識を使う場合は、Expo Goではなく EAS Development Build でネイティブ依存を検証する
+
+現在の自動候補βは、Expo Goで動く軽量な候補表示であり、完全な画像認識ではありません。
+候補が外れる前提で、手動追加、ドラッグ調整、十字微調整を主導線にしています。

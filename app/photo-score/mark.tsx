@@ -16,6 +16,7 @@ import type {
   PhotoScoreCandidate,
   PhotoScoreDetectionMode,
 } from '../../types';
+import { adjustPhotoScoreHit, nudgePhotoScoreHit } from '../../utils/adjustPhotoScoreHit';
 import { calculatePhotoScoreSummary } from '../../utils/calculateDartScore';
 import { detectDartCandidatesFromImage } from '../../utils/detectDartCandidatesFromImage';
 import {
@@ -41,12 +42,14 @@ export default function PhotoScoreMarkScreen() {
   const [hits, setHits] = useState<DartHitResult[]>(initialHits);
   const [isExpanded, setIsExpanded] = useState(false);
   const [tapMessage, setTapMessage] = useState('');
-  const [detectionMode, setDetectionMode] = useState<PhotoScoreDetectionMode>('semiAuto');
+  const [detectionMode, setDetectionMode] = useState<PhotoScoreDetectionMode>('manual');
   const [activeHitId, setActiveHitId] = useState<string | null>(null);
   const [imageCandidates, setImageCandidates] = useState<PhotoScoreCandidate[]>([]);
   const [isDetectingCandidates, setIsDetectingCandidates] = useState(false);
   const [candidateMessage, setCandidateMessage] = useState('');
+  const [isLargeNudge, setIsLargeNudge] = useState(false);
   const summary = calculatePhotoScoreSummary(hits);
+  const activeHit = hits.find((hit) => hit.id === activeHitId) ?? null;
   const selectedCandidateIds = hits
     .map((hit) => hit.candidateId)
     .filter((candidateId): candidateId is string => Boolean(candidateId));
@@ -60,7 +63,7 @@ export default function PhotoScoreMarkScreen() {
   const candidates = useMemo(
     () =>
       mergePhotoScoreCandidates(imageCandidates, calibrationCandidates, {
-        maxCandidates: 8,
+        maxCandidates: 6,
         selectedCandidateIds,
       }),
     [calibrationCandidates, imageCandidates, selectedCandidateIds],
@@ -120,14 +123,15 @@ export default function PhotoScoreMarkScreen() {
     }
 
     setIsDetectingCandidates(true);
+    setDetectionMode('semiAuto');
     setCandidateMessage('候補生成中...');
 
     const detectedCandidates = await detectDartCandidatesFromImage(
       normalizedImageUri,
       parsedCalibration,
       {
-        maxCandidates: 8,
-        minConfidence: 0.35,
+        maxCandidates: 5,
+        minConfidence: 0.45,
         enableHeuristicFallback: true,
       },
     );
@@ -143,7 +147,7 @@ export default function PhotoScoreMarkScreen() {
     }
 
     setCandidateMessage(
-      '画像解析候補を表示しました。候補が外れる場合はドラッグ調整または手動追加してください。',
+      '自動候補βを表示しました。候補が違う場合は使わず、手動追加またはドラッグ調整してください。',
     );
   };
 
@@ -158,15 +162,23 @@ export default function PhotoScoreMarkScreen() {
           return hit;
         }
 
-        return {
-          ...buildPhotoScoreHit(parsedCalibration, point, hit.id, 'adjusted', {
-            id: hit.candidateId ?? hit.id,
-            confidence: hit.confidence ?? 0.5,
-          }),
-          candidateId: hit.candidateId,
-        };
+        return adjustPhotoScoreHit(parsedCalibration, hit, point);
       }),
     );
+  };
+
+  const nudgeActiveHit = (delta: NormalizedPoint) => {
+    if (!parsedCalibration || !activeHitId) {
+      setTapMessage('選択済み点をタップすると微調整できます。');
+      return;
+    }
+
+    setHits((currentHits) =>
+      currentHits.map((hit) =>
+        hit.id === activeHitId ? nudgePhotoScoreHit(parsedCalibration, hit, delta) : hit,
+      ),
+    );
+    setTapMessage('微調整しました。スコアを再判定しています。');
   };
 
   const goResult = () => {
@@ -200,7 +212,7 @@ export default function PhotoScoreMarkScreen() {
     <ScreenShell>
       <SectionTitle
         title="刺さった位置を選択"
-        subtitle="候補から選ぶ、写真上を手動タップする、選択点をドラッグ調整する、の順で進めます。"
+        subtitle="まず手動で先端位置を指定し、必要に応じて自動候補βや微調整を使います。"
       />
 
       <Card muted>
@@ -216,14 +228,18 @@ export default function PhotoScoreMarkScreen() {
         <Text style={styles.summaryTitle}>入力モード</Text>
         <View style={styles.modeRow}>
           <ModeChip
-            label="画像候補から選ぶ"
-            selected={detectionMode === 'semiAuto'}
-            onPress={() => setDetectionMode('semiAuto')}
+            label="手動で1本追加"
+            selected={detectionMode === 'manual'}
+            onPress={() => {
+              setDetectionMode('manual');
+              setActiveHitId(null);
+              setTapMessage('写真上の刺さった先端付近をタップしてください。');
+            }}
           />
           <ModeChip
-            label="手動で追加"
-            selected={detectionMode === 'manual'}
-            onPress={() => setDetectionMode('manual')}
+            label="自動候補βを試す"
+            selected={detectionMode === 'semiAuto'}
+            onPress={() => setDetectionMode('semiAuto')}
           />
           <ModeChip
             label="選択点を調整"
@@ -237,11 +253,23 @@ export default function PhotoScoreMarkScreen() {
           />
         </View>
         <Text style={styles.modeHelper}>
-          画像解析候補を探すか、キャリブレーション候補を使います。候補を選んだ後、選択中の本を写真上でドラッグして微調整できます。
+          画像候補はβ機能です。候補がズレる場合は、手動追加またはドラッグ調整してください。最終的な判定は、ユーザーが選択・調整した位置で行います。
+        </Text>
+        <AppButton
+          label="手動で1本追加"
+          onPress={() => {
+            setDetectionMode('manual');
+            setActiveHitId(null);
+            setTapMessage('写真上の刺さった先端付近をタップしてください。');
+          }}
+          disabled={hits.length >= 3}
+        />
+        <Text style={styles.modeHelper}>
+          ダーツのフライトやシャフトではなく、ボードに刺さっている先端付近を指定してください。
         </Text>
         <View style={styles.detectActions}>
           <AppButton
-            label={isDetectingCandidates ? '候補生成中...' : '画像から候補を探す'}
+            label={isDetectingCandidates ? '候補生成中...' : '画像候補βを試す'}
             onPress={() => void detectImageCandidates()}
             variant="secondary"
             disabled={isDetectingCandidates}
@@ -251,7 +279,7 @@ export default function PhotoScoreMarkScreen() {
             onPress={() => {
               setImageCandidates([]);
               setCandidateMessage(
-                '画像候補をリセットしました。キャリブレーション候補を表示します。',
+                '画像候補βをリセットしました。補助候補または手動追加を使ってください。',
               );
             }}
             variant="secondary"
@@ -259,6 +287,9 @@ export default function PhotoScoreMarkScreen() {
           />
         </View>
         {candidateMessage ? <Text style={styles.modeHelper}>{candidateMessage}</Text> : null}
+        <Text style={styles.betaNote}>
+          候補が実際の刺さり位置と違う場合は、候補を使わず手動で追加してください。先端位置を合わせると判定が安定します。
+        </Text>
       </Card>
 
       <Card>
@@ -288,9 +319,9 @@ export default function PhotoScoreMarkScreen() {
 
       {detectionMode === 'semiAuto' ? (
         <Card muted>
-          <Text style={styles.summaryTitle}>画像解析候補 / キャリブレーション候補</Text>
+          <Text style={styles.summaryTitle}>自動候補β / 補助候補</Text>
           <Text style={styles.modeHelper}>
-            候補が外れる場合は、選択後に写真上でドラッグ調整するか、写真上を直接タップして手動追加してください。
+            候補は自動確定ではありません。正しい候補だけを選び、違う場合は手動で先端位置を追加してください。
           </Text>
           <View style={styles.candidateList}>
             {candidates.length === 0 ? (
@@ -308,7 +339,7 @@ export default function PhotoScoreMarkScreen() {
                 >
                   <View style={styles.candidateMain}>
                     <Text style={styles.candidateTitle}>
-                      {candidate.source === 'imageAnalysisCandidate' ? '画像候補' : '補助候補'}
+                      {candidate.source === 'imageAnalysisCandidate' ? '自動候補β' : '補助候補'}
                       {index + 1}
                     </Text>
                     <Text style={styles.candidateReason}>{candidate.reason}</Text>
@@ -316,7 +347,9 @@ export default function PhotoScoreMarkScreen() {
                   <Text style={styles.candidateConfidence}>
                     {candidate.selected
                       ? '選択済み'
-                      : `信頼度 ${Math.round(candidate.confidence * 100)}%`}
+                      : candidate.source === 'imageAnalysisCandidate'
+                        ? '要確認'
+                        : '候補目安'}
                   </Text>
                 </Pressable>
               ))
@@ -329,6 +362,53 @@ export default function PhotoScoreMarkScreen() {
           ) : null}
         </Card>
       ) : null}
+
+      <Card>
+        <Text style={styles.summaryTitle}>十字微調整</Text>
+        <Text style={styles.modeHelper}>
+          {activeHit
+            ? `調整中：${formatHit(activeHit)}。矢印で少しずつ動かすと、スコアを再判定します。`
+            : '選択済み点をタップすると、ここで細かく調整できます。'}
+        </Text>
+        <View style={styles.nudgeModeRow}>
+          <ModeChip
+            label="少し動かす"
+            selected={!isLargeNudge}
+            onPress={() => setIsLargeNudge(false)}
+          />
+          <ModeChip
+            label="大きく動かす"
+            selected={isLargeNudge}
+            onPress={() => setIsLargeNudge(true)}
+          />
+        </View>
+        <View style={styles.nudgePad}>
+          <View style={styles.nudgePadRow}>
+            <NudgeButton
+              label="↑"
+              disabled={!activeHit}
+              onPress={() => nudgeActiveHit({ x: 0, y: -(isLargeNudge ? 0.01 : 0.003) })}
+            />
+          </View>
+          <View style={styles.nudgePadRow}>
+            <NudgeButton
+              label="←"
+              disabled={!activeHit}
+              onPress={() => nudgeActiveHit({ x: -(isLargeNudge ? 0.01 : 0.003), y: 0 })}
+            />
+            <NudgeButton
+              label="↓"
+              disabled={!activeHit}
+              onPress={() => nudgeActiveHit({ x: 0, y: isLargeNudge ? 0.01 : 0.003 })}
+            />
+            <NudgeButton
+              label="→"
+              disabled={!activeHit}
+              onPress={() => nudgeActiveHit({ x: isLargeNudge ? 0.01 : 0.003, y: 0 })}
+            />
+          </View>
+        </View>
+      </Card>
 
       <Card muted>
         <Text style={styles.summaryTitle}>選択済みの3本</Text>
@@ -432,15 +512,11 @@ function formatHit(hit: DartHitResult) {
 
 function formatSource(hit: DartHitResult) {
   if (hit.detectionSource === 'imageAnalysisCandidate') {
-    return hit.confidence
-      ? `画像解析候補 / 信頼度 ${Math.round(hit.confidence * 100)}%`
-      : '画像解析候補';
+    return hit.confidence ? `自動候補β / 目安 ${Math.round(hit.confidence * 100)}%` : '自動候補β';
   }
 
   if (hit.detectionSource === 'autoCandidate') {
-    return hit.confidence
-      ? `キャリブレーション候補 / 信頼度 ${Math.round(hit.confidence * 100)}%`
-      : 'キャリブレーション候補';
+    return hit.confidence ? `補助候補 / 目安 ${Math.round(hit.confidence * 100)}%` : '補助候補';
   }
 
   if (hit.detectionSource === 'adjusted') {
@@ -486,6 +562,29 @@ function ModeChip({
       style={[styles.modeChip, selected && styles.modeChipSelected]}
     >
       <Text style={[styles.modeChipText, selected && styles.modeChipTextSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function NudgeButton({
+  disabled,
+  label,
+  onPress,
+}: {
+  disabled?: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.nudgeButton, disabled && styles.nudgeButtonDisabled]}
+    >
+      <Text style={[styles.nudgeButtonText, disabled && styles.nudgeButtonTextDisabled]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -562,6 +661,13 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 12,
   },
+  betaNote: {
+    marginTop: 10,
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
   candidateList: {
     gap: 8,
     marginTop: 12,
@@ -626,6 +732,41 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '900',
+  },
+  nudgeModeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+  },
+  nudgePad: {
+    gap: 8,
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  nudgePadRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  nudgeButton: {
+    width: 58,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  nudgeButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+  nudgeButtonText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  nudgeButtonTextDisabled: {
+    color: colors.textMuted,
   },
   warningText: {
     marginTop: 10,

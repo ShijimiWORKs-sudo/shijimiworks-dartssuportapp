@@ -27,8 +27,8 @@ const candidateSeeds: CandidateSeed[] = [
     id: 'candidate-bull',
     angleOffset: 0,
     ratio: 0,
-    confidence: 0.76,
-    reason: 'ブル中心付近の候補',
+    confidence: 0.42,
+    reason: 'ブル中心付近の補助候補',
   },
   {
     id: 'candidate-triple-20',
@@ -93,13 +93,14 @@ export function mergePhotoScoreCandidates(
   calibrationCandidates: PhotoScoreCandidate[],
   options: MergePhotoScoreCandidatesOptions = {},
 ) {
-  const maxCandidates = options.maxCandidates ?? 8;
+  const maxCandidates = options.maxCandidates ?? 6;
   const minDistance = options.minDistance ?? 0.045;
   const selectedCandidateIds = limitSelectedCandidateIds(
     options.selectedCandidateIds ?? [],
     options.maxSelected ?? 3,
   );
   const sortedCandidates = [...imageCandidates, ...calibrationCandidates]
+    .filter((candidate) => isNormalizedPoint(candidate.point))
     .map((candidate) => ({
       ...candidate,
       selected: selectedCandidateIds.includes(candidate.id) || candidate.selected,
@@ -122,6 +123,17 @@ export function mergePhotoScoreCandidates(
     selected: selectedCandidateIds.includes(candidate.id) || candidate.selected,
     id: candidate.id || `candidate-${index + 1}`,
   }));
+}
+
+function isNormalizedPoint(point: NormalizedPoint) {
+  return (
+    Number.isFinite(point.x) &&
+    Number.isFinite(point.y) &&
+    point.x >= 0 &&
+    point.x <= 1 &&
+    point.y >= 0 &&
+    point.y <= 1
+  );
 }
 
 export function limitSelectedCandidateIds(candidateIds: string[], maxSelected = 3) {
