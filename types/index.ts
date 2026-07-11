@@ -45,6 +45,17 @@ export type BoardCalibration = {
   ringPreset: 'soft' | 'steelLike' | 'custom';
 };
 
+export type BoardReferenceImage = {
+  id: string;
+  boardType: BoardType;
+  imageUri: string;
+  calibration: BoardCalibration;
+  createdAt: string;
+  note?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+};
+
 export type DartHitArea = 'single' | 'double' | 'triple' | 'singleBull' | 'doubleBull' | 'out';
 
 export type PhotoScoreDetectionSource =
@@ -60,6 +71,30 @@ export type PhotoScoreCandidate = {
 };
 
 export type PhotoScoreDetectionMode = 'manual' | 'semiAuto';
+
+export type PhotoDetectionQuality = {
+  isUsable: boolean;
+  centerDistance: number;
+  radiusDifference: number;
+  rotationDifferenceDegrees: number;
+  aspectRatioDifference: number;
+  scaleDifference: number;
+  brightnessDifference?: number;
+  warnings: string[];
+};
+
+export type DifferenceDetectionResult = {
+  candidates: PhotoScoreCandidate[];
+  quality: PhotoDetectionQuality;
+  detectionMethod: 'referenceDifference' | 'singleImageHeuristic' | 'calibrationFallback';
+  warnings: string[];
+};
+
+export type PhotoDetectionFeedback = {
+  quality: PhotoDetectionQuality;
+  detectionMethod: DifferenceDetectionResult['detectionMethod'];
+  warnings: string[];
+};
 
 export type PhotoScoreVerticalBias = 'high' | 'low' | 'centered' | 'unknown';
 
@@ -108,6 +143,7 @@ export type PhotoScoreEntry = {
   tripleCount: number;
   doubleCount: number;
   groupingAnalysis?: PhotoScoreGroupingAnalysis;
+  detectionFeedback?: PhotoDetectionFeedback;
 };
 
 export type PracticeInputMethod = 'manual' | 'photoTap';
@@ -213,13 +249,14 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 8;
+  schemaVersion: 9;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
   formPhotoAdviceResults: FormPhotoAdviceResult[];
+  boardReferenceImages: BoardReferenceImage[];
   uiTheme: UiTheme;
   backgroundTheme: BackgroundTheme;
 };
@@ -231,6 +268,7 @@ export type LegacyStoredState = {
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];
   formPhotoAdviceResults?: FormPhotoAdviceResult[];
+  boardReferenceImages?: BoardReferenceImage[];
   uiTheme?: UiTheme;
   backgroundTheme?: BackgroundTheme;
 };

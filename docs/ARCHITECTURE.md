@@ -11,6 +11,7 @@ Expo Router のルート画面を配置します。
 - `app/practice*.tsx`: 練習メニューと履歴
 - `app/record.tsx`: 練習記録入力
 - `app/records*.tsx`: 練習記録一覧/詳細/編集
+- `app/photo-score*.tsx`: 写真スコア記録、基準画像登録、候補選択、結果保存
 - `app/analysis.tsx`: 分析
 - `app/consult*.tsx`: フォーム相談と相談履歴
 - `app/library*.tsx`: 資料ライブラリ
@@ -53,6 +54,7 @@ Expo Router のルート画面を配置します。
 - `practiceFilterState`
 - `consultHistories`
 - `formPhotoAdviceResults`
+- `boardReferenceImages`
 
 ## utils/
 
@@ -65,6 +67,9 @@ Expo Router のルート画面を配置します。
 - `createConsultHistory.ts`: 相談履歴生成
 - `searchKnowledgeBase.ts`: 資料検索
 - `detectDartCandidatesFromImage.ts`: 写真スコアの自動候補β検出入口
+- `detectDartCandidatesFromDifference.ts`: 基準画像比較候補の入口とフォールバック制御
+- `evaluatePhotoDetectionQuality.ts`: 基準画像と現在画像のキャリブレーション品質評価
+- `boardCoordinateTransform.ts`: 画像座標とボード正規化座標の変換
 - `photoScoreCandidates.ts`: キャリブレーション候補生成、候補マージ、ヒット生成
 - `analyzePhotoScoreGrouping.ts`: 写真スコア3点のグルーピング、偏り、散り方、助言生成
 - `appStateMigration.ts`: 保存データmigration
@@ -95,30 +100,32 @@ AsyncStorage key:
 
 ```ts
 {
-  schemaVersion: 8,
+  schemaVersion: 9,
   profile: UserProfile | null,
   records: PracticeRecord[], // photoScore?: PhotoScoreEntry を含む場合あり
   favoritePracticeMenuIds: string[],
   practiceFilterState: PracticeFilterState,
   consultHistories: ConsultHistory[],
   formPhotoAdviceResults: FormPhotoAdviceResult[],
+  boardReferenceImages: BoardReferenceImage[],
   uiTheme: 'light' | 'gray',
   backgroundTheme: 'black' | 'brown' | 'purple' | 'orange' | 'white'
 }
 ```
 
-## schemaVersion 8
+## schemaVersion 9
 
-現在は相談履歴保存の `consultHistories`、フォーム写真相談結果の `formPhotoAdviceResults`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme`、写真スコア記録用の `PracticeRecord.photoScore` を扱います。
+現在は相談履歴保存の `consultHistories`、フォーム写真相談結果の `formPhotoAdviceResults`、写真スコア基準画像の `boardReferenceImages`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme`、写真スコア記録用の `PracticeRecord.photoScore` を扱います。
 
 初期値:
 
 - `uiTheme`: `gray`
 - `backgroundTheme`: `white`
+- `boardReferenceImages`: `[]`
 
 Migration方針:
 
-- schemaVersion 1〜7 は `consultHistories: []`、`formPhotoAdviceResults: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
+- schemaVersion 1〜8 は `consultHistories: []`、`formPhotoAdviceResults: []`、`boardReferenceImages: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
 - 既存のプロフィール、練習記録、お気に入り、フィルタ条件、相談履歴、フォーム写真相談結果、写真スコア関連データは維持
 - 壊れたJSONはクラッシュさせず、legacy/default値へフォールバック
 - 複雑な破損データ修復はMVP範囲外
@@ -130,21 +137,32 @@ Migration方針:
 - `PhotoScoreGroupingAnalysis` はグループ中心、まとまり半径、上下左右の偏り、縦散り/横散り、助言をoptionalで保存
 - `DartHitResult` には `detectionSource`、`candidateId`、`confidence` をoptionalで保存
 - `detectionSource` は `imageAnalysisCandidate`、`autoCandidate`、`manualTap`、`adjusted` を扱う
+- `BoardReferenceImage` は空のボード写真URI、ボード種別、キャリブレーション、撮影メモ、画像サイズを保存する
 - 分析画面は既存の `score` / `bullCount` を使うため、大きな変更なしで反映される
 
 写真スコア候補フロー:
 
-1. `detectDartCandidatesFromImage` が画像URIとキャリブレーションを受け取り、自動候補βを返す
-2. Expo Goでは安定したピクセル取得を行わず、現在は軽量な候補生成とフォールバックを使う
-3. `generateCalibrationBasedCandidates` がボード幾何ベースの補助候補を返す
-4. `mergePhotoScoreCandidates` が自動候補βと補助候補を統合し、近い候補を重複除去して最大件数へ制限する
-5. ユーザーが候補を選択するか、手動で刺さった先端位置を追加し、ドラッグまたは十字ボタンで微調整する
-6. 最終的な採点は、ユーザーが選択・調整した3点だけで行う
-7. 将来OpenCV、ML Kit、TensorFlow Lite、Core ML / Visionへ移行する場合は `detectDartCandidatesFromImage` の内部を差し替える
-8. 本格的な画像認識を使う場合は、Expo Goではなく EAS Development Build でネイティブ依存を検証する
+1. `detectDartCandidatesFromDifference` が基準画像、現在画像URI、現在キャリブレーションを受け取る
+2. `evaluatePhotoDetectionQuality` が中心差、外周半径差、20方向角度差、縦横比差を評価する
+3. MVPでは実ピクセル差分は未実装のため、`detectDifferenceCandidates` は差し替え用の境界として空配列を返す
+4. 差分候補がない場合、`fallbackToSingleImageCandidates` が `detectDartCandidatesFromImage` の自動候補βへフォールバックする
+5. 画像候補が作れない場合、`generateCalibrationBasedCandidates` がボード幾何ベースの補助候補を返す
+6. `mergePhotoScoreCandidates` が画像候補βと補助候補を統合し、近い候補を重複除去して最大件数へ制限する
+7. ユーザーが候補を選択するか、手動で刺さった先端位置を追加し、ドラッグまたは十字ボタンで微調整する
+8. 最終的な採点は、ユーザーが選択・調整した3点だけで行う
+9. 将来OpenCV、ML Kit、TensorFlow Lite、Core ML / Visionへ移行する場合は `detectDifferenceCandidates` または `detectDartCandidatesFromImage` の内部を差し替える
+10. 本格的な画像認識を使う場合は、Expo Goではなく EAS Development Build でネイティブ依存を検証する
 
 現在の自動候補βは、Expo Goで動く軽量な候補表示であり、完全な画像認識ではありません。
 候補が外れる前提で、手動追加、ドラッグ調整、十字微調整を主導線にしています。
+
+基準画像比較フェーズ1:
+
+- `/photo-score/reference` でボード種別ごとに空のボード基準画像を管理する
+- `/photo-score/reference/register` で空ボード写真、中心、20方向、外周、撮影条件メモを保存する
+- `/photo-score/mark` では登録済み基準画像がある場合に「基準画像と比較して候補を探す」を表示する
+- 現在は品質評価とフォールバックの導線を完成させ、実ピクセル差分は未実装
+- `PhotoDetectionQuality` と `DifferenceDetectionResult` は将来の画像差分/AI検出結果を同じUIに流し込むための境界
 
 フォーム写真3枚相談MVP:
 

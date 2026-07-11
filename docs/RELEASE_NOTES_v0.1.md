@@ -7,7 +7,7 @@ DartsSupportApp MVP v0.1 は、iPhone Expo Goで主要導線を確認するた�
 - App: `DartsSupportApp`
 - package.json: `0.1.0`
 - app.json: `0.1.0`
-- schemaVersion: `7`
+- schemaVersion: `9`
 
 ## 実装済み機能
 
@@ -19,6 +19,7 @@ DartsSupportApp MVP v0.1 は、iPhone Expo Goで主要導線を確認するた�
 - お気に入り練習
 - 練習記録の入力/一覧/詳細/編集/削除
 - 写真スコア記録MVP
+- 写真スコア基準画像登録/品質評価
 - メニュー別記録履歴
 - 分析ダッシュボード
 - フォーム相談
@@ -26,7 +27,7 @@ DartsSupportApp MVP v0.1 は、iPhone Expo Goで主要導線を確認するた�
 - 資料ライブラリ検索
 - 資料詳細
 - AsyncStorage ローカル保存
-- schemaVersion 8 migration
+- schemaVersion 9 migration
 - TypeScript / ESLint / Prettier / test / data integrity check
 - GitHub Actions CI
 

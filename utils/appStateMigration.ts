@@ -1,6 +1,7 @@
 import type {
   AppState,
   BackgroundTheme,
+  BoardReferenceImage,
   ConsultHistory,
   FormPhotoAdviceResult,
   LegacyStoredState,
@@ -11,7 +12,7 @@ import type {
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 import { sortFormPhotoAdviceHistories } from './formPhotoAdviceHistory';
 
-export const schemaVersion = 8;
+export const schemaVersion = 9;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -37,6 +38,7 @@ export function migrateAppState(
       formPhotoAdviceResults: sortFormPhotoAdviceHistories(
         legacyState.formPhotoAdviceResults ?? [],
       ),
+      boardReferenceImages: sortBoardReferenceImages(legacyState.boardReferenceImages ?? []),
       uiTheme: safeUiTheme(legacyState.uiTheme),
       backgroundTheme: safeBackgroundTheme(legacyState.backgroundTheme),
     };
@@ -51,6 +53,9 @@ export function migrateAppState(
     consultHistories: sortConsultHistories(safeConsultHistories(parsedState.consultHistories)),
     formPhotoAdviceResults: sortFormPhotoAdviceHistories(
       safeFormPhotoAdviceResults(parsedState.formPhotoAdviceResults),
+    ),
+    boardReferenceImages: sortBoardReferenceImages(
+      safeBoardReferenceImages(parsedState.boardReferenceImages),
     ),
     uiTheme: safeUiTheme(parsedState.uiTheme),
     backgroundTheme: safeBackgroundTheme(parsedState.backgroundTheme),
@@ -101,6 +106,10 @@ function safeFormPhotoAdviceResults(value: FormPhotoAdviceResult[] | undefined) 
   return Array.isArray(value) ? value : [];
 }
 
+function safeBoardReferenceImages(value: BoardReferenceImage[] | undefined) {
+  return Array.isArray(value) ? value.filter(isBoardReferenceImageLike) : [];
+}
+
 function safeUiTheme(value: unknown): UiTheme {
   return value === 'light' || value === 'gray' ? value : defaultUiTheme;
 }
@@ -121,4 +130,21 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortBoardReferenceImages(images: BoardReferenceImage[]) {
+  return [...images].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+function isBoardReferenceImageLike(value: BoardReferenceImage) {
+  return Boolean(
+    value &&
+    typeof value.id === 'string' &&
+    typeof value.imageUri === 'string' &&
+    typeof value.createdAt === 'string' &&
+    value.calibration &&
+    value.boardType === value.calibration.boardType,
+  );
 }

@@ -22,6 +22,8 @@ import type {
   AnalysisSummary,
   AppState,
   BackgroundTheme,
+  BoardReferenceImage,
+  BoardType,
   ConsultHistory,
   FormPhotoAdviceResult,
   PracticeFilterState,
@@ -55,6 +57,7 @@ type AppStateContextValue = {
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
   formPhotoAdviceResults: FormPhotoAdviceResult[];
+  boardReferenceImages: BoardReferenceImage[];
   uiTheme: UiTheme;
   backgroundTheme: BackgroundTheme;
   theme: ThemeColors;
@@ -74,6 +77,8 @@ type AppStateContextValue = {
   deleteConsultHistory: (id: string) => Promise<void>;
   addFormPhotoAdviceResult: (result: FormPhotoAdviceResult) => Promise<void>;
   deleteFormPhotoAdviceResult: (id: string) => Promise<void>;
+  saveBoardReferenceImage: (referenceImage: BoardReferenceImage) => Promise<void>;
+  deleteBoardReferenceImage: (id: string) => Promise<void>;
   toggleFavoritePracticeMenu: (id: string) => Promise<void>;
   isFavoritePracticeMenu: (id: string) => boolean;
   savePracticeFilterState: (filterState: PracticeFilterState) => Promise<void>;
@@ -85,6 +90,7 @@ type AppStateContextValue = {
   getAnalysisSummary: () => AnalysisSummary;
   getConsultHistoryById: (id: string) => ConsultHistory | null;
   getFormPhotoAdviceResultById: (id: string) => FormPhotoAdviceResult | null;
+  getBoardReferenceImageByBoardType: (boardType: BoardType) => BoardReferenceImage | null;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -96,6 +102,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
   const [formPhotoAdviceResults, setFormPhotoAdviceResults] = useState<FormPhotoAdviceResult[]>([]);
+  const [boardReferenceImages, setBoardReferenceImages] = useState<BoardReferenceImage[]>([]);
   const [uiTheme, setUiTheme] = useState<UiTheme>('gray');
   const [backgroundTheme, setBackgroundTheme] = useState<BackgroundTheme>(defaultBackgroundTheme);
   const [practiceFilterState, setPracticeFilterState] = useState<PracticeFilterState>(
@@ -130,6 +137,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setFormPhotoAdviceResults(
           sortFormPhotoAdviceHistories(migratedState.formPhotoAdviceResults),
         );
+        setBoardReferenceImages(sortBoardReferenceImages(migratedState.boardReferenceImages));
         setUiTheme(migratedState.uiTheme);
         setBackgroundTheme(migratedState.backgroundTheme);
 
@@ -160,6 +168,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         practiceFilterState,
         consultHistories,
         formPhotoAdviceResults,
+        boardReferenceImages,
         uiTheme,
         backgroundTheme,
         ...overrides,
@@ -169,6 +178,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     },
     [
       backgroundTheme,
+      boardReferenceImages,
       consultHistories,
       favoritePracticeMenuIds,
       formPhotoAdviceResults,
@@ -331,6 +341,30 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [formPhotoAdviceResults, persistCurrentState],
   );
 
+  const saveBoardReferenceImage = useCallback(
+    async (referenceImage: BoardReferenceImage) => {
+      const nextReferenceImages = sortBoardReferenceImages([
+        referenceImage,
+        ...boardReferenceImages.filter(
+          (item) => item.id !== referenceImage.id && item.boardType !== referenceImage.boardType,
+        ),
+      ]);
+
+      setBoardReferenceImages(nextReferenceImages);
+      await persistCurrentState({ boardReferenceImages: nextReferenceImages });
+    },
+    [boardReferenceImages, persistCurrentState],
+  );
+
+  const deleteBoardReferenceImage = useCallback(
+    async (id: string) => {
+      const nextReferenceImages = boardReferenceImages.filter((item) => item.id !== id);
+      setBoardReferenceImages(nextReferenceImages);
+      await persistCurrentState({ boardReferenceImages: nextReferenceImages });
+    },
+    [boardReferenceImages, persistCurrentState],
+  );
+
   const toggleFavoritePracticeMenu = useCallback(
     async (id: string) => {
       const nextIds = isFavoritePracticeMenuId(favoritePracticeMenuIds, id)
@@ -395,6 +429,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [formPhotoAdviceResults],
   );
 
+  const getBoardReferenceImageByBoardType = useCallback(
+    (boardType: BoardType) =>
+      boardReferenceImages.find((referenceImage) => referenceImage.boardType === boardType) ?? null,
+    [boardReferenceImages],
+  );
+
   const theme = useMemo(
     () => ({
       ...themes[uiTheme],
@@ -414,6 +454,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       practiceFilterState,
       consultHistories,
       formPhotoAdviceResults,
+      boardReferenceImages,
       uiTheme,
       backgroundTheme,
       theme,
@@ -429,6 +470,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       deleteConsultHistory,
       addFormPhotoAdviceResult,
       deleteFormPhotoAdviceResult,
+      saveBoardReferenceImage,
+      deleteBoardReferenceImage,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -440,6 +483,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getAnalysisSummary,
       getConsultHistoryById,
       getFormPhotoAdviceResultById,
+      getBoardReferenceImageByBoardType,
     }),
     [
       isLoading,
@@ -449,6 +493,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       practiceFilterState,
       consultHistories,
       formPhotoAdviceResults,
+      boardReferenceImages,
       uiTheme,
       backgroundTheme,
       theme,
@@ -464,6 +509,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       deleteConsultHistory,
       addFormPhotoAdviceResult,
       deleteFormPhotoAdviceResult,
+      saveBoardReferenceImage,
+      deleteBoardReferenceImage,
       toggleFavoritePracticeMenu,
       isFavoritePracticeMenu,
       savePracticeFilterState,
@@ -475,6 +522,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getAnalysisSummary,
       getConsultHistoryById,
       getFormPhotoAdviceResultById,
+      getBoardReferenceImageByBoardType,
     ],
   );
 
@@ -499,6 +547,7 @@ async function persistAppState(appState: AppState) {
       records: sortRecords(appState.records),
       consultHistories: sortConsultHistories(appState.consultHistories),
       formPhotoAdviceResults: sortFormPhotoAdviceHistories(appState.formPhotoAdviceResults),
+      boardReferenceImages: sortBoardReferenceImages(appState.boardReferenceImages),
       practiceFilterState: normalizePracticeFilterState(appState.practiceFilterState),
     }),
   );
@@ -526,6 +575,12 @@ function sortRecords(records: PracticeRecord[]) {
 
 function sortConsultHistories(histories: ConsultHistory[]) {
   return [...histories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function sortBoardReferenceImages(referenceImages: BoardReferenceImage[]) {
+  return [...referenceImages].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 function getStartOfWeek(date: Date) {

@@ -9,13 +9,16 @@ import { ScreenShell } from '../../components/ScreenShell';
 import { SectionTitle } from '../../components/SectionTitle';
 import { boardTypeLabels, boardTypes } from '../../constants/photoScore';
 import { colors } from '../../constants/theme';
+import { useAppState } from '../../contexts/AppStateContext';
 import type { BoardType } from '../../types';
 
 export default function PhotoScoreStartScreen() {
   const router = useRouter();
+  const { getBoardReferenceImageByBoardType } = useAppState();
   const [boardType, setBoardType] = useState<BoardType>('DARTSLIVE_ZERO');
   const [imageUri, setImageUri] = useState('');
   const [error, setError] = useState('');
+  const referenceImage = getBoardReferenceImageByBoardType(boardType);
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -106,6 +109,27 @@ export default function PhotoScoreStartScreen() {
               </Text>
             </Pressable>
           ))}
+        </View>
+      </Card>
+
+      <Card muted>
+        <Text style={styles.cardTitle}>基準画像</Text>
+        {referenceImage ? (
+          <Text style={styles.bodyText}>
+            {boardTypeLabels[boardType]}{' '}
+            の基準画像が登録済みです。撮影条件が変わった場合は撮り直してください。
+          </Text>
+        ) : (
+          <Text style={styles.bodyText}>
+            このボード種別の基準画像は未登録です。手動記録はそのまま使えますが、基準画像を登録すると候補表示前にズレを確認できます。
+          </Text>
+        )}
+        <View style={styles.actionStack}>
+          <AppButton
+            label={referenceImage ? '基準画像を確認・変更' : '基準画像を登録'}
+            onPress={() => router.push('/photo-score/reference')}
+            variant="secondary"
+          />
         </View>
       </Card>
 

@@ -9,8 +9,10 @@ import { ScreenShell } from '../../components/ScreenShell';
 import { SectionTitle } from '../../components/SectionTitle';
 import { dartHitAreaLabels } from '../../constants/photoScore';
 import { colors } from '../../constants/theme';
+import { useAppState } from '../../contexts/AppStateContext';
 import type {
   BoardCalibration,
+  DifferenceDetectionResult,
   DartHitResult,
   NormalizedPoint,
   PhotoScoreCandidate,
@@ -18,6 +20,7 @@ import type {
 } from '../../types';
 import { adjustPhotoScoreHit, nudgePhotoScoreHit } from '../../utils/adjustPhotoScoreHit';
 import { calculatePhotoScoreSummary } from '../../utils/calculateDartScore';
+import { detectDartCandidatesFromDifference } from '../../utils/detectDartCandidatesFromDifference';
 import { detectDartCandidatesFromImage } from '../../utils/detectDartCandidatesFromImage';
 import {
   buildPhotoScoreHit,
@@ -27,6 +30,7 @@ import {
 
 export default function PhotoScoreMarkScreen() {
   const router = useRouter();
+  const { getBoardReferenceImageByBoardType } = useAppState();
   const {
     calibration,
     hits: hitsParam,
@@ -46,9 +50,15 @@ export default function PhotoScoreMarkScreen() {
   const [activeHitId, setActiveHitId] = useState<string | null>(null);
   const [imageCandidates, setImageCandidates] = useState<PhotoScoreCandidate[]>([]);
   const [isDetectingCandidates, setIsDetectingCandidates] = useState(false);
+  const [isDetectingReferenceCandidates, setIsDetectingReferenceCandidates] = useState(false);
   const [candidateMessage, setCandidateMessage] = useState('');
+  const [differenceDetectionResult, setDifferenceDetectionResult] =
+    useState<DifferenceDetectionResult | null>(null);
   const [isLargeNudge, setIsLargeNudge] = useState(false);
   const summary = calculatePhotoScoreSummary(hits);
+  const referenceImage = parsedCalibration
+    ? getBoardReferenceImageByBoardType(parsedCalibration.boardType)
+    : null;
   const activeHit = hits.find((hit) => hit.id === activeHitId) ?? null;
   const selectedCandidateIds = hits
     .map((hit) => hit.candidateId)
@@ -148,6 +158,50 @@ export default function PhotoScoreMarkScreen() {
 
     setCandidateMessage(
       '自動候補βを表示しました。候補が違う場合は使わず、手動追加またはドラッグ調整してください。',
+    );
+  };
+
+  const detectReferenceCandidates = async () => {
+    if (!parsedCalibration || isDetectingReferenceCandidates) {
+      return;
+    }
+
+    setIsDetectingReferenceCandidates(true);
+    setDetectionMode('semiAuto');
+    setCandidateMessage('基準画像との一致度を確認しています...');
+
+    const result = await detectDartCandidatesFromDifference({
+      referenceImage,
+      currentImageUri: normalizedImageUri,
+      currentCalibration: parsedCalibration,
+      maxCandidates: 5,
+    });
+
+    setDifferenceDetectionResult(result);
+    setImageCandidates(result.candidates);
+    setIsDetectingReferenceCandidates(false);
+
+    if (result.candidates.length === 0) {
+      setCandidateMessage(
+        '基準画像から候補を作れませんでした。手動追加または補助候補を使ってください。',
+      );
+      return;
+    }
+
+    if (result.detectionMethod === 'referenceDifference') {
+      setCandidateMessage('基準画像との比較候補を表示しました。正しい候補だけを選んでください。');
+      return;
+    }
+
+    if (result.detectionMethod === 'singleImageHeuristic') {
+      setCandidateMessage(
+        '基準画像の一致度を確認しました。現時点では単一画像の自動候補βへフォールバックしています。',
+      );
+      return;
+    }
+
+    setCandidateMessage(
+      'キャリブレーション位置から補助候補を表示しています。手動確認してください。',
     );
   };
 
@@ -269,6 +323,16 @@ export default function PhotoScoreMarkScreen() {
         </Text>
         <View style={styles.detectActions}>
           <AppButton
+            label={
+              isDetectingReferenceCandidates
+                ? '基準画像と確認中...'
+                : '基準画像と比較して候補を探す'
+            }
+            onPress={() => void detectReferenceCandidates()}
+            variant="secondary"
+            disabled={isDetectingReferenceCandidates || !referenceImage}
+          />
+          <AppButton
             label={isDetectingCandidates ? '候補生成中...' : '画像候補βを試す'}
             onPress={() => void detectImageCandidates()}
             variant="secondary"
@@ -278,6 +342,7 @@ export default function PhotoScoreMarkScreen() {
             label="候補をリセット"
             onPress={() => {
               setImageCandidates([]);
+              setDifferenceDetectionResult(null);
               setCandidateMessage(
                 '画像候補βをリセットしました。補助候補または手動追加を使ってください。',
               );
@@ -287,6 +352,14 @@ export default function PhotoScoreMarkScreen() {
           />
         </View>
         {candidateMessage ? <Text style={styles.modeHelper}>{candidateMessage}</Text> : null}
+        {!referenceImage ? (
+          <Text style={styles.modeHelper}>
+            このボード種別の基準画像は未登録です。先に登録すると、撮影ズレを確認してから候補を探せます。
+          </Text>
+        ) : null}
+        {differenceDetectionResult ? (
+          <DetectionQualityBox result={differenceDetectionResult} />
+        ) : null}
         <Text style={styles.betaNote}>
           候補が実際の刺さり位置と違う場合は、候補を使わず手動で追加してください。先端位置を合わせると判定が安定します。
         </Text>
@@ -477,6 +550,39 @@ export default function PhotoScoreMarkScreen() {
   );
 }
 
+function DetectionQualityBox({ result }: { result: DifferenceDetectionResult }) {
+  const methodLabel =
+    result.detectionMethod === 'referenceDifference'
+      ? '基準画像比較'
+      : result.detectionMethod === 'singleImageHeuristic'
+        ? '単一画像候補β'
+        : '補助候補';
+
+  return (
+    <View style={styles.qualityBox}>
+      <Text style={styles.qualityTitle}>
+        {methodLabel} / {result.quality.isUsable ? '撮影ズレは許容範囲' : '撮影ズレに注意'}
+      </Text>
+      <Text style={styles.qualityText}>
+        中心差 {formatMetric(result.quality.centerDistance)} / 大きさ差{' '}
+        {Math.round(result.quality.radiusDifference * 100)}% / 回転差{' '}
+        {Math.round(result.quality.rotationDifferenceDegrees)}°
+      </Text>
+      {result.warnings.length > 0 ? (
+        <View style={styles.warningList}>
+          {result.warnings.map((warning) => (
+            <Text key={warning} style={styles.qualityWarning}>
+              ・{warning}
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.qualityText}>大きなズレ警告はありません。</Text>
+      )}
+    </View>
+  );
+}
+
 function parseCalibration(value: string | undefined): BoardCalibration | null {
   if (!value) {
     return null;
@@ -487,6 +593,10 @@ function parseCalibration(value: string | undefined): BoardCalibration | null {
   } catch {
     return null;
   }
+}
+
+function formatMetric(value: number) {
+  return value.toFixed(3);
 }
 
 function parseHits(value: string | undefined): DartHitResult[] {
@@ -663,6 +773,34 @@ const styles = StyleSheet.create({
   },
   betaNote: {
     marginTop: 10,
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  qualityBox: {
+    gap: 6,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  qualityTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  qualityText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  warningList: {
+    gap: 4,
+  },
+  qualityWarning: {
     color: colors.warning,
     fontSize: 12,
     fontWeight: '800',
