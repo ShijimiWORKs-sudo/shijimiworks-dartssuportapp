@@ -33,9 +33,17 @@ npx eas-cli build:configure
 
 `eas init` 実行後、Expo側でprojectIdが発行されると `app.json` の `extra.eas.projectId` に追記される場合があります。現時点では架空のprojectIdは入れていません。
 
+Appleログインや証明書設定の確認前に、Codex側でEAS Build本番実行は行いません。
+
 ## Preview Build
 
 TestFlight前の内部確認用です。
+
+```bash
+npx eas-cli build --platform ios --profile preview
+```
+
+npm scriptsを使う場合:
 
 ```bash
 npm run eas:build:preview
@@ -46,6 +54,12 @@ Apple Developer Program未加入の場合、iOSデバイス配布や証明書作
 ## Production Build
 
 App Store Connect / TestFlight提出用です。
+
+```bash
+npx eas-cli build --platform ios --profile production
+```
+
+npm scriptsを使う場合:
 
 ```bash
 npm run eas:build:production

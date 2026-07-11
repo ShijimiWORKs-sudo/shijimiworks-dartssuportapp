@@ -84,9 +84,13 @@ EAS CLIはグローバルインストールせず、`npx eas-cli` でも利用�
 npx eas-cli login
 npx eas-cli init
 npx eas-cli build:configure
+npx eas-cli build --platform ios --profile preview
+npx eas-cli build --platform ios --profile production
 ```
 
 このリポジトリには `eas.json` を追加済みです。
+
+同じビルド操作はnpm scriptsからも実行できます。
 
 ```bash
 npm run eas:build:preview
@@ -94,7 +98,7 @@ npm run eas:build:production
 npm run eas:submit:ios
 ```
 
-Apple Developer Program未加入の場合、iOS配布ビルド、証明書作成、TestFlight提出の段階で止まる可能性があります。Apple Team ID、EAS projectId、App Store Connect情報は実行後に確定するため、架空値は入れていません。
+Apple Developer Program未加入の場合、iOS配布ビルド、証明書作成、TestFlight提出の段階で止まる可能性があります。Apple Team ID、EAS projectId、App Store Connect情報は実行後に確定するため、架空値は入れていません。EAS Build本番実行は、人間側でAppleログインと証明書設定を確認してから行います。
 
 ## TestFlightへ進む前に必要なもの
 
