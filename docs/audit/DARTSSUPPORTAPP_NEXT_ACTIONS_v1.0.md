@@ -13,21 +13,20 @@
 
 ## P0 Actions
 
-| ID     | Action                           | 対象                                              | 目的                                                             | 変更範囲                | 禁止範囲                                     | QA                                          |
-| ------ | -------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- | ----------------------- | -------------------------------------------- | ------------------------------------------- |
-| P0-001 | Account実装反映状況を確認        | Account/PIN/Export/Import PR                      | 現ブランチではAccount未実装のため、仕様書との差分を解消する      | PR確認、merge後再棚卸し | DartsApp変更、force push、既存データ初期化   | schemaVersion、PIN秘密情報、既存records保持 |
-| P0-002 | PIN/Export秘密情報ポリシーを固定 | Account実装後                                     | PIN、hash、token、secret、SecureStore情報、画像URIをExportしない | Export mapper/test/docs | PINをAsyncStorage/AppState/JSONへ保存しない  | 不正JSON、秘密key混入、Export内容確認       |
-| P0-003 | 正式ゲーム機能の混入監視         | `PracticeGame`, `calculateDartScore`, photo score | 写真スコア補助ロジックが正式ゲームエンジン化しないよう境界を守る | 文言、docs、テスト分類  | 01残点、BUST、2P、MATCH、CLOSE、アワード追加 | route検索、keyword検索、実機導線確認        |
+| ID     | Action                       | 対象                                              | 目的                                                             | 変更範囲                | 禁止範囲                                     | QA                                    |
+| ------ | ---------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- | ----------------------- | -------------------------------------------- | ------------------------------------- |
+| P0-001 | PIN/Export秘密情報の回帰監視 | Account Export/Import                             | PIN、hash、token、secret、SecureStore情報、画像URIをExportしない | Export mapper/test/docs | PINをAsyncStorage/AppState/JSONへ保存しない  | 不正JSON、秘密key混入、Export内容確認 |
+| P0-002 | 正式ゲーム機能の混入監視     | `PracticeGame`, `calculateDartScore`, photo score | 写真スコア補助ロジックが正式ゲームエンジン化しないよう境界を守る | 文言、docs、テスト分類  | 01残点、BUST、2P、MATCH、CLOSE、アワード追加 | route検索、keyword検索、実機導線確認  |
 
 ## P1 Actions
 
-| ID     | Action                     | 対象                           | 目的                                               | 変更範囲                                  | 禁止範囲                         | QA                                 |
-| ------ | -------------------------- | ------------------------------ | -------------------------------------------------- | ----------------------------------------- | -------------------------------- | ---------------------------------- |
-| P1-001 | 今日の練習を実施管理へ拡張 | `/practice`, `/home`, AppState | 推薦だけでなく、今日の予定、開始、完了、中断を扱う | Support用PracticeSession型、today plan UI | 正式ゲームルール、BUST、2P交代   | iPhone縦、未設定profile、記録0件   |
-| P1-002 | 練習タイマーを追加         | 新規Support timer画面          | 練習時間と休憩時間を保存可能にする                 | Timer state、start/pause/resume/finish    | PCゲーム用timer、対戦round timer | バックグラウンド制限、再起動、保存 |
-| P1-003 | ラウンド/セット進行を追加  | PracticeMenu detail / session  | ブル練習10R×3投などのSupport用進行を扱う           | currentRound/currentSet/remainingThrows   | 01/CRICKET/MATCHの正式進行       | 中断/再開、完了、記録保存          |
-| P1-004 | 目標管理MVP                | `/goals` または settings配下   | 週間/月間回数、時間、Bull目標を設定する            | Goal型、達成率算出、home表示              | DartsApp Rating算出              | 目標なし、期限切れ、再起動         |
-| P1-005 | Backup/Restore導線         | Settings配下                   | Export/Importをユーザー向けBackup/Restoreに整理    | JSON preview、restore guard、docs         | クラウド同期、API通信            | 不正JSON、既存データ保持、秘密除外 |
+| ID     | Action                     | 対象                           | 目的                                                                    | 変更範囲                                  | 禁止範囲                         | QA                                 |
+| ------ | -------------------------- | ------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------- | -------------------------------- | ---------------------------------- |
+| P1-001 | 今日の練習を実施管理へ拡張 | `/practice`, `/home`, AppState | 推薦だけでなく、今日の予定、開始、完了、中断を扱う                      | Support用PracticeSession型、today plan UI | 正式ゲームルール、BUST、2P交代   | iPhone縦、未設定profile、記録0件   |
+| P1-002 | 練習タイマーを追加         | 新規Support timer画面          | 練習時間と休憩時間を保存可能にする                                      | Timer state、start/pause/resume/finish    | PCゲーム用timer、対戦round timer | バックグラウンド制限、再起動、保存 |
+| P1-003 | ラウンド/セット進行を追加  | PracticeMenu detail / session  | ブル練習10R×3投などのSupport用進行を扱う                                | currentRound/currentSet/remainingThrows   | 01/CRICKET/MATCHの正式進行       | 中断/再開、完了、記録保存          |
+| P1-004 | 目標管理MVP                | `/goals` または settings配下   | 週間/月間回数、時間、Bull目標を設定する                                 | Goal型、達成率算出、home表示              | DartsApp Rating算出              | 目標なし、期限切れ、再起動         |
+| P1-005 | Backup/Restore UX強化      | Account Export/Import          | 実装済みExport/Importをユーザー向けBackup/Restoreとして分かりやすくする | JSON preview、restore guard、docs         | クラウド同期、API通信            | 不正JSON、既存データ保持、秘密除外 |
 
 ## P2 Actions
 
@@ -50,7 +49,7 @@
 
 ## Human Confirmation Items
 
-- Account/PIN/Export/Import PRがmainへ入った後、この棚卸しを再実行する
+- Account/PIN/Export/Importはmainへ反映済み。今後は秘密情報除外と既存record互換を回帰確認する
 - iPhone Expo Goで現在の`/photo-score`、`/practice`、`/analysis`、`/consult`を確認する
 - 「01」「CRICKET」の表示が正式ゲームではなく記録カテゴリとして伝わるか確認する
 - App Store説明文が正式01/CRICKETゲーム実装と誤認されないか確認する
@@ -58,11 +57,11 @@
 
 ## Recommended Immediate Sequence
 
-1. Account契約PRのmerge状況を確認する。
-2. Account実装反映後、schemaVersion、PIN秘密情報、Export/Importを再QAする。
-3. 今日の練習を「推薦」から「実施管理」へ拡張する仕様を書く。
-4. Timer + Round/Set + Goalを同じPracticeSession設計としてまとめる。
-5. 週別/月別分析とStreakをrecords/sessionから算出する。
+1. Account Export/Importの実機QAで、PIN/secret/画像URIがJSONに含まれないことを確認する。
+2. 今日の練習を「推薦」から「実施管理」へ拡張する仕様を書く。
+3. Timer + Round/Set + Goalを同じPracticeSession設計としてまとめる。
+4. 週別/月別分析とStreakをrecords/sessionから算出する。
+5. DartsApp連携前にCommonEvent/Outboxの送信対象と除外対象を再確認する。
 
 ## Boundary Guardrails for Future Codex Tasks
 

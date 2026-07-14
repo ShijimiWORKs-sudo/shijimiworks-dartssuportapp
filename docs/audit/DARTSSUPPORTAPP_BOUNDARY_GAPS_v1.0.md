@@ -18,8 +18,9 @@ DartsSupportApp内に、正式な01ゲームエンジン、STANDARD CRICKET対�
 - 週間/月間目標
 - 連続練習日数
 - 月別分析UI
-- Backup/Restoreとしてのユーザー向け導線
-- Account/PIN/Export/Importの実装反映
+- Backup/Restoreとしてのユーザー向け説明と復元ガードの磨き込み
+
+Account/PIN/Export/Import/CommonEvent/OutboxはPR #1 merge後の`origin/main`へ反映済みです。
 
 ## Formal Game Leakage Check
 
@@ -129,27 +130,34 @@ DartsSupportAppで実装しない境界:
 - PC Web詳細分析へ流用するdomainは`SHARED_CONTRACT`
 - 月別/週別UI拡張は`MOVE_LATER`
 
-## Account / PIN / Export / Import Gap
+## Account / PIN / Export / Import Status
 
 現在状態:
 
 - `docs/specs/Darts_Common_Account_Data_Contract_v1.0.md` と `docs/codex/CODEX_SUPPORT_ACCOUNT_CONTRACT_v1.0.md` は存在する。
-- 現在ブランチの`types/index.ts`は `schemaVersion: 9`。
-- `AppState` に `accounts`、`activeAccountId`、`accountLockEnabled`、`commonOutbox` はない。
-- `UserProfile` と `PracticeRecord` に `accountId` はない。
-- `app/account/*` route はない。
-- `expo-secure-store` dependency はない。
+- 現在ブランチの`types/index.ts`は `schemaVersion: 10`。
+- `AppState` に `accounts`、`activeAccountId`、`accountLockEnabled`、`commonOutbox` がある。
+- `UserProfile` と `PracticeRecord` に optional `accountId` がある。
+- 新規練習記録は `activeAccountId` があれば `accountId` を保存する。
+- 既存練習記録は `accountId` 未設定でも読める互換処理を維持している。
+- `app/account/export.tsx`、`import.tsx`、`index.tsx`、`profile.tsx`、`register.tsx`、`security.tsx`、`unlock.tsx` がある。
+- `expo-secure-store` dependency と `features/account/application/pinService.ts` がある。
+- PINはSecureStoreへ保存し、AppState、AsyncStorage内のAppState JSON、Export JSONには保存しない設計。
+- CommonEvent/Outboxは `CommonOutboxItem` と `commonOutbox` としてローカル保持される。
 
 判定:
 
-- Account/PIN/Export/Importは`REVIEW`
-- 共通契約としては`SHARED_CONTRACT`
-- 実装は別ブランチ/PRの反映状況を確認してから再棚卸しする
+- Account画面、PIN、Export/Import UIは`KEEP`
+- account_id、activeAccountId、PracticeRecord.accountId、CommonEvent/Outbox、共通JSONは`SHARED_CONTRACT`
+- Account実装状況確認は完了し、P0から除外済み
 
-リスク:
+Import MVP仕様と既知制限:
 
-- 仕様書はあるが現ブランチに実装がないため、README/QA/ARCHITECTUREとの整合が今後ずれる可能性がある。
-- Account導入時は既存写真スコア、フォーム相談、相談履歴、記録編集を壊さないmigrationが必要。
+- JSON parse、contractVersion、account_id、秘密情報混入を検証し、preview後にImportする。
+- 同一recordはskipし、差分があるrecordはconflict扱いにするMVP。
+- 画像URI、PIN、hash、token、secret、SecureStore keyはExport対象外。
+- クラウド同期、Supabase、Apple/Google Login、API通信、複数端末同期は未実装。
+- ImportはローカルMVPであり、DartsAppとの自動通信や双方向同期は行わない。
 
 ## Shared Contract Candidates
 
@@ -203,10 +211,10 @@ DartsAppと共通契約にすべきデータ:
 
 | 項目                | 仕様                            | 現実装           | 分類       |
 | ------------------- | ------------------------------- | ---------------- | ---------- |
-| Account             | 共通account_id、ローカルAccount | 現ブランチ未実装 | REVIEW     |
-| PIN                 | SecureStore保存                 | 現ブランチ未実装 | REVIEW     |
-| Export/Import       | 共通JSON                        | 現ブランチ未実装 | REVIEW     |
-| Backup/Restore      | Support主機能                   | 専用UIなし       | MOVE_LATER |
+| Account             | 共通account_id、ローカルAccount | 実装済み         | KEEP       |
+| PIN                 | SecureStore保存                 | 実装済み         | KEEP       |
+| Export/Import       | 共通JSON                        | MVP実装済み      | KEEP       |
+| Backup/Restore      | Support主機能                   | Account配下にMVP | KEEP       |
 | 今日の予定/実施済み | Support主機能                   | 推薦のみ         | MOVE_LATER |
 | Timer               | Support主機能                   | 未実装           | MOVE_LATER |
 | Round/Set進行       | Support主機能                   | 未実装           | MOVE_LATER |
@@ -218,4 +226,4 @@ DartsAppと共通契約にすべきデータ:
 現時点のDartsSupportAppは、練習管理・簡易記録・写真スコア・分析・相談のSupportアプリとして概ね境界内です。
 正式ゲームエンジンの混入は確認されませんでした。
 
-最優先のギャップは、Account契約の実装反映状況確認と、今日の練習を「推薦」から「実施管理」へ進めることです。
+最優先のギャップは、今日の練習を「推薦」から「実施管理」へ進めることと、練習タイマー/ラウンド/目標をSupport用PracticeSessionとして整理することです。
