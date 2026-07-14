@@ -84,23 +84,13 @@ API・エクスポート・アプリ間契約はsnake_caseを正本とする。
 ### 3.1 account_status
 
 ```ts
-type AccountStatus =
-  | 'local_active'
-  | 'cloud_pending'
-  | 'cloud_active'
-  | 'suspended'
-  | 'deleted';
+type AccountStatus = 'local_active' | 'cloud_pending' | 'cloud_active' | 'suspended' | 'deleted';
 ```
 
 ### 3.2 auth_mode
 
 ```ts
-type AuthMode =
-  | 'local_pin'
-  | 'local_no_auth'
-  | 'email_password'
-  | 'apple'
-  | 'google';
+type AuthMode = 'local_pin' | 'local_no_auth' | 'email_password' | 'apple' | 'google';
 ```
 
 初期DartsSupportAppはlocal_pinを使用する。
@@ -257,13 +247,7 @@ DartsApp側で後日実装し、DartsSupportAppは受信・表示側を将来実
 ```
 
 ```ts
-type SyncStatus =
-  | 'local_only'
-  | 'pending'
-  | 'synced'
-  | 'conflict'
-  | 'failed'
-  | 'deleted';
+type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict' | 'failed' | 'deleted';
 ```
 
 現時点のDartsSupportAppはlocal_only。

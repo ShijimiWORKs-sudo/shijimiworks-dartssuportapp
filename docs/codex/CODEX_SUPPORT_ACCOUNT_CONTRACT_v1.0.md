@@ -93,18 +93,9 @@ features/account/domain/commonContractTypes.ts
 
 ```ts
 export type AccountStatus =
-  | 'local_active'
-  | 'cloud_pending'
-  | 'cloud_active'
-  | 'suspended'
-  | 'deleted';
+  'local_active' | 'cloud_pending' | 'cloud_active' | 'suspended' | 'deleted';
 
-export type AuthMode =
-  | 'local_pin'
-  | 'local_no_auth'
-  | 'email_password'
-  | 'apple'
-  | 'google';
+export type AuthMode = 'local_pin' | 'local_no_auth' | 'email_password' | 'apple' | 'google';
 
 export type LocalAccount = {
   schemaVersion: 1;
@@ -120,13 +111,7 @@ export type LocalAccount = {
   deletedAt: string | null;
 };
 
-export type SyncStatus =
-  | 'local_only'
-  | 'pending'
-  | 'synced'
-  | 'conflict'
-  | 'failed'
-  | 'deleted';
+export type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict' | 'failed' | 'deleted';
 
 export type CommonContractEnvelope<T> = {
   contractName: 'darts_common_data';
@@ -223,17 +208,17 @@ features/account/application/AccountServicePort.ts
 API:
 
 ```ts
-registerLocalAccount(input)
-updateLocalAccount(accountId, input)
-getActiveAccount()
-setActiveAccount(accountId)
-enablePinLock(accountId, pin)
-verifyPin(accountId, pin)
-changePin(accountId, oldPin, newPin)
-disablePinLock(accountId, pin)
-lockSession()
-unlockSession(accountId, pin)
-deleteLocalAccount(accountId)
+registerLocalAccount(input);
+updateLocalAccount(accountId, input);
+getActiveAccount();
+setActiveAccount(accountId);
+enablePinLock(accountId, pin);
+verifyPin(accountId, pin);
+changePin(accountId, oldPin, newPin);
+disablePinLock(accountId, pin);
+lockSession();
+unlockSession(accountId, pin);
+deleteLocalAccount(accountId);
 ```
 
 検証:
@@ -351,11 +336,11 @@ features/account/application/commonContractMapper.ts
 実装:
 
 ```ts
-toCommonAccountJson(account)
-toCommonProfileJson(profile, accountId)
-toCommonPracticeRecordJson(record, accountId)
-createCommonExportEnvelope(payload, accountId, appVersion)
-validateCommonImportEnvelope(value)
+toCommonAccountJson(account);
+toCommonProfileJson(profile, accountId);
+toCommonPracticeRecordJson(record, accountId);
+createCommonExportEnvelope(payload, accountId, appVersion);
+validateCommonImportEnvelope(value);
 ```
 
 外部JSONはsnake_case。
