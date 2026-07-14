@@ -57,6 +57,7 @@ export default function PracticeScreen() {
     resetPracticeFilterState,
     isFavoritePracticeMenu,
     toggleFavoritePracticeMenu,
+    addTodayPractice,
     theme,
   } = useAppState();
   const recommendation = recommendPracticeMenus(profile, records);
@@ -83,6 +84,13 @@ export default function PracticeScreen() {
   const goToDetail = (menu: PracticeMenu) => router.push(`/practice/${menu.id}`);
   const goToRecord = (menu: PracticeMenu) =>
     router.push({ pathname: '/record', params: { practiceMenuId: menu.id } });
+  const addToToday = async (menu: PracticeMenu) => {
+    await addTodayPractice({
+      practiceMenuId: menu.id,
+      plannedDurationMinutes: menu.durationMinutes,
+    });
+    router.push('/practice/today');
+  };
   const updateFilter = (nextFilterState: PracticeFilterState) =>
     void savePracticeFilterState({
       ...practiceFilterState,
@@ -93,6 +101,15 @@ export default function PracticeScreen() {
     <ScreenShell>
       <SectionTitle title="今日の練習" subtitle={recommendation.reasonText} />
 
+      <View style={styles.todayEntry}>
+        <AppButton label="今日の練習管理を開く" onPress={() => router.push('/practice/today')} />
+        <AppButton
+          label="今日の練習を追加"
+          onPress={() => router.push('/practice/today/select')}
+          variant="secondary"
+        />
+      </View>
+
       <SectionTitle title="今日のおすすめ練習" />
       {recommendation.todayMenus.map(({ menu, reason }) => (
         <PracticeMenuCard
@@ -102,6 +119,7 @@ export default function PracticeScreen() {
           isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onAddToday={() => void addToToday(menu)}
           onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
@@ -115,6 +133,7 @@ export default function PracticeScreen() {
           isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onAddToday={() => void addToToday(menu)}
           onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
@@ -167,6 +186,7 @@ export default function PracticeScreen() {
           isFavorite={isFavoritePracticeMenu(menu.id)}
           onViewDetails={() => goToDetail(menu)}
           onRecord={() => goToRecord(menu)}
+          onAddToday={() => void addToToday(menu)}
           onToggleFavorite={() => void toggleFavoritePracticeMenu(menu.id)}
         />
       ))}
@@ -210,6 +230,9 @@ function FilterGroup<T extends string>({ title, items, value, onChange }: Filter
 }
 
 const styles = StyleSheet.create({
+  todayEntry: {
+    gap: 10,
+  },
   filterGroup: {
     gap: 8,
   },

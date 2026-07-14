@@ -95,6 +95,7 @@ function RecordListCard({ record, onPress }: RecordListCardProps) {
       </View>
       <Text style={styles.metaText}>
         {machineLabels[record.machineType]} / {gameLabels[record.gameType]}
+        {record.todayPracticeItemId ? ' / 今日の練習' : ''}
       </Text>
       <View style={styles.statRow}>
         <Text style={styles.statText}>スコア {record.score}</Text>

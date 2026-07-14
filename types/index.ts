@@ -53,7 +53,12 @@ export type LocalAccount = {
 export type CommonOutboxEventType =
   | 'account_created'
   | 'account_profile_updated'
+  | 'today_practice_planned'
+  | 'practice_session_started'
+  | 'practice_session_paused'
+  | 'practice_session_resumed'
   | 'practice_session_completed'
+  | 'practice_session_cancelled'
   | 'consultation_saved'
   | 'record_deleted';
 
@@ -290,6 +295,12 @@ export type PracticeRecord = {
   memo: string;
   inputMethod?: PracticeInputMethod;
   photoScore?: PhotoScoreEntry;
+  durationSeconds?: number;
+  completedRounds?: number;
+  completedSets?: number;
+  achievementRate?: number;
+  nextMemo?: string;
+  todayPracticeItemId?: string;
 };
 
 export type PracticeRecordInput = Omit<PracticeRecord, 'id' | 'date'>;
@@ -301,12 +312,54 @@ export type PracticeFilterState = {
   problemTag?: string | null;
 };
 
+export type TodayPracticeStatus = 'planned' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+
+export type TodayPracticeItem = {
+  id: string;
+  accountId?: string;
+  practiceMenuId: string;
+  practiceDate: string;
+  order: number;
+  status: TodayPracticeStatus;
+  plannedDurationMinutes: number;
+  actualDurationSeconds: number;
+  plannedRounds?: number;
+  plannedSets?: number;
+  completedRounds?: number;
+  completedSets?: number;
+  startedAt?: string;
+  pausedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  note?: string;
+  resultScore?: number;
+  resultBullCount?: number;
+  resultCondition?: Condition;
+  achievementRate?: number;
+  nextMemo?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ActivePracticeSession = {
+  id: string;
+  todayPracticeItemId: string;
+  accountId?: string;
+  startedAt: string;
+  lastResumedAt: string;
+  accumulatedSeconds: number;
+  state: 'running' | 'paused';
+};
+
 export type AppState = {
-  schemaVersion: 10;
+  schemaVersion: 11;
   accounts: LocalAccount[];
   activeAccountId: string | null;
   accountLockEnabled: boolean;
   commonOutbox: CommonOutboxItem[];
+  todayPracticeItems: TodayPracticeItem[];
+  activePracticeSessions: ActivePracticeSession[];
+  todayPracticeDefaultDurationMinutes?: number;
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
@@ -325,6 +378,9 @@ export type LegacyStoredState = {
   activeAccountId?: string | null;
   accountLockEnabled?: boolean;
   commonOutbox?: CommonOutboxItem[];
+  todayPracticeItems?: TodayPracticeItem[];
+  activePracticeSessions?: ActivePracticeSession[];
+  todayPracticeDefaultDurationMinutes?: number;
   favoritePracticeMenuIds?: string[];
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];

@@ -1,5 +1,6 @@
 import type {
   AppState,
+  ActivePracticeSession,
   BackgroundTheme,
   BoardReferenceImage,
   CommonOutboxItem,
@@ -9,12 +10,14 @@ import type {
   LocalAccount,
   PracticeFilterState,
   PracticeRecord,
+  TodayPracticeItem,
   UiTheme,
 } from '../types';
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 import { sortFormPhotoAdviceHistories } from './formPhotoAdviceHistory';
 
-export const schemaVersion = 10;
+export const schemaVersion = 11;
+export const defaultTodayPracticeDurationMinutes = 20;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -36,6 +39,12 @@ export function migrateAppState(
       activeAccountId: safeActiveAccountId(legacyState.activeAccountId),
       accountLockEnabled: legacyState.accountLockEnabled ?? false,
       commonOutbox: sortCommonOutbox(legacyState.commonOutbox ?? []),
+      todayPracticeItems: sortTodayPracticeItems(legacyState.todayPracticeItems ?? []),
+      activePracticeSessions: sortActivePracticeSessions(legacyState.activePracticeSessions ?? []),
+      todayPracticeDefaultDurationMinutes: safePositiveNumber(
+        legacyState.todayPracticeDefaultDurationMinutes,
+        defaultTodayPracticeDurationMinutes,
+      ),
       profile: legacyState.profile,
       records: sortRecords(legacyState.records),
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
@@ -56,6 +65,16 @@ export function migrateAppState(
     activeAccountId: safeActiveAccountId(parsedState.activeAccountId),
     accountLockEnabled: parsedState.accountLockEnabled === true,
     commonOutbox: sortCommonOutbox(safeCommonOutbox(parsedState.commonOutbox)),
+    todayPracticeItems: sortTodayPracticeItems(
+      safeTodayPracticeItems(parsedState.todayPracticeItems),
+    ),
+    activePracticeSessions: sortActivePracticeSessions(
+      safeActivePracticeSessions(parsedState.activePracticeSessions),
+    ),
+    todayPracticeDefaultDurationMinutes: safePositiveNumber(
+      parsedState.todayPracticeDefaultDurationMinutes,
+      defaultTodayPracticeDurationMinutes,
+    ),
     profile: parsedState.profile ?? legacyState.profile,
     records: sortRecords(safeRecords(parsedState.records, legacyState.records)),
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
@@ -128,6 +147,18 @@ function safeCommonOutbox(value: CommonOutboxItem[] | undefined) {
   return Array.isArray(value) ? value.filter(isCommonOutboxItemLike) : [];
 }
 
+function safeTodayPracticeItems(value: TodayPracticeItem[] | undefined) {
+  return Array.isArray(value) ? value.filter(isTodayPracticeItemLike) : [];
+}
+
+function safeActivePracticeSessions(value: ActivePracticeSession[] | undefined) {
+  return Array.isArray(value) ? value.filter(isActivePracticeSessionLike) : [];
+}
+
+function safePositiveNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 function safeActiveAccountId(value: unknown) {
   return typeof value === 'string' ? value : null;
 }
@@ -172,6 +203,22 @@ function sortCommonOutbox(items: CommonOutboxItem[]) {
   );
 }
 
+function sortTodayPracticeItems(items: TodayPracticeItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.practiceDate !== b.practiceDate) {
+      return b.practiceDate.localeCompare(a.practiceDate);
+    }
+
+    return a.order - b.order;
+  });
+}
+
+function sortActivePracticeSessions(items: ActivePracticeSession[]) {
+  return [...items].sort(
+    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+  );
+}
+
 function isBoardReferenceImageLike(value: BoardReferenceImage) {
   return Boolean(
     value &&
@@ -202,5 +249,32 @@ function isCommonOutboxItemLike(value: CommonOutboxItem) {
     typeof value.accountId === 'string' &&
     typeof value.createdAt === 'string' &&
     value.eventVersion === 1,
+  );
+}
+
+function isTodayPracticeItemLike(value: TodayPracticeItem) {
+  return Boolean(
+    value &&
+    typeof value.id === 'string' &&
+    typeof value.practiceMenuId === 'string' &&
+    typeof value.practiceDate === 'string' &&
+    typeof value.order === 'number' &&
+    typeof value.status === 'string' &&
+    typeof value.plannedDurationMinutes === 'number' &&
+    typeof value.actualDurationSeconds === 'number' &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string',
+  );
+}
+
+function isActivePracticeSessionLike(value: ActivePracticeSession) {
+  return Boolean(
+    value &&
+    typeof value.id === 'string' &&
+    typeof value.todayPracticeItemId === 'string' &&
+    typeof value.startedAt === 'string' &&
+    typeof value.lastResumedAt === 'string' &&
+    typeof value.accumulatedSeconds === 'number' &&
+    (value.state === 'running' || value.state === 'paused'),
   );
 }

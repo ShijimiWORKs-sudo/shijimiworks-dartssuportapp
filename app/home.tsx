@@ -17,7 +17,7 @@ import { recommendPracticeMenus } from '../utils/recommendPracticeMenus';
 const logo = require('../assets/images/logo.png');
 
 const menuLinks = [
-  { label: '今日の練習', href: '/practice', helper: 'レベル別メニュー' },
+  { label: '今日の練習', href: '/practice/today', helper: '実施管理・タイマー' },
   { label: '練習記録', href: '/records', helper: '一覧・詳細・編集' },
   { label: '写真スコア記録', href: '/photo-score', helper: '自宅練習を写真から記録' },
   { label: '分析', href: '/analysis', helper: '改善コメントを見る' },
@@ -41,6 +41,8 @@ export default function HomeScreen() {
     toggleFavoritePracticeMenu,
     theme,
     getActiveAccount,
+    addTodayPractice,
+    getTodayPracticeProgressForDate,
   } = useAppState();
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
@@ -50,6 +52,18 @@ export default function HomeScreen() {
   const recommended = recommendation.todayMenus[0];
   const recommendedMenu = recommended?.menu;
   const activeAccount = getActiveAccount();
+  const todayPracticeProgress = getTodayPracticeProgressForDate();
+  const addRecommendedToToday = async () => {
+    if (!recommendedMenu) {
+      return;
+    }
+
+    await addTodayPractice({
+      practiceMenuId: recommendedMenu.id,
+      plannedDurationMinutes: recommendedMenu.durationMinutes,
+    });
+    router.push('/practice/today');
+  };
 
   return (
     <ScreenShell>
@@ -113,6 +127,31 @@ export default function HomeScreen() {
 
       <Card>
         <SectionTitle
+          title="今日の練習"
+          subtitle="実施順・タイマー・完了入力をまとめて管理します。"
+          tone="card"
+        />
+        <View style={styles.analysisSummaryGrid}>
+          <View style={styles.analysisSummaryItem}>
+            <Text style={styles.analysisSummaryValue}>
+              {todayPracticeProgress.completedCount}/{todayPracticeProgress.plannedCount}
+            </Text>
+            <Text style={styles.analysisSummaryLabel}>完了メニュー</Text>
+          </View>
+          <View style={styles.analysisSummaryItem}>
+            <Text style={styles.analysisSummaryValue}>
+              {Math.floor(todayPracticeProgress.totalActualDurationSeconds / 60)}分
+            </Text>
+            <Text style={styles.analysisSummaryLabel}>実施時間</Text>
+          </View>
+        </View>
+        <View style={styles.analysisAction}>
+          <AppButton label="今日の練習を開く" onPress={() => router.push('/practice/today')} />
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle
           title="分析サマリー"
           subtitle="直近30日の保存記録から表示します。"
           tone="card"
@@ -166,15 +205,7 @@ export default function HomeScreen() {
                 onPress={() => void toggleFavoritePracticeMenu(recommendedMenu.id)}
                 variant="secondary"
               />
-              <AppButton
-                label="練習する"
-                onPress={() =>
-                  router.push({
-                    pathname: '/record',
-                    params: { practiceMenuId: recommendedMenu.id },
-                  })
-                }
-              />
+              <AppButton label="今日に追加" onPress={() => void addRecommendedToToday()} />
             </View>
           </>
         ) : (

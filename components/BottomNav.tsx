@@ -5,7 +5,7 @@ import { useAppState } from '../contexts/AppStateContext';
 
 const tabs = [
   { href: '/home', icon: '⌂', label: 'ホーム' },
-  { href: '/practice', icon: '◎', label: '練習' },
+  { href: '/practice/today', icon: '◎', label: '練習' },
   { href: '/records', icon: '+', label: '記録' },
   { href: '/analysis', icon: '↗', label: '分析' },
   { href: '/consult', icon: '?', label: '相談' },
@@ -20,7 +20,9 @@ export function BottomNav() {
     <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.surface }]}>
       {tabs.map((tab) => {
         const active =
-          pathname === tab.href || (tab.href !== '/home' && pathname.startsWith(`${tab.href}/`));
+          pathname === tab.href ||
+          (tab.href === '/practice/today' && pathname.startsWith('/practice')) ||
+          (tab.href !== '/home' && pathname.startsWith(`${tab.href}/`));
 
         return (
           <Pressable
