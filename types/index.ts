@@ -29,6 +29,57 @@ export type UiTheme = 'light' | 'gray';
 
 export type BackgroundTheme = 'black' | 'brown' | 'purple' | 'orange' | 'white';
 
+export type AccountStatus =
+  'local_active' | 'cloud_pending' | 'cloud_active' | 'suspended' | 'deleted';
+
+export type AuthMode = 'local_pin' | 'local_no_auth' | 'email_password' | 'apple' | 'google';
+
+export type SyncStatus = 'local_only' | 'pending' | 'synced' | 'conflict' | 'failed' | 'deleted';
+
+export type LocalAccount = {
+  schemaVersion: 1;
+  accountId: string;
+  userName: string;
+  displayName: string;
+  email: string | null;
+  accountStatus: AccountStatus;
+  authMode: AuthMode;
+  cloudAuthSubject: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+export type CommonOutboxEventType =
+  | 'account_created'
+  | 'account_profile_updated'
+  | 'practice_session_completed'
+  | 'consultation_saved'
+  | 'record_deleted';
+
+export type CommonOutboxItem = {
+  outboxId: string;
+  eventType: CommonOutboxEventType;
+  eventVersion: 1;
+  accountId: string;
+  sourceRecordId: string | null;
+  occurredAt: string;
+  createdAt: string;
+  syncStatus: SyncStatus;
+  payload: Record<string, unknown>;
+};
+
+export type CommonContractEnvelope<T> = {
+  contractName: 'darts_common_data';
+  contractVersion: 1;
+  exportId: string;
+  exportedAt: string;
+  sourceApp: 'darts_app' | 'darts_support_app';
+  sourceAppVersion: string;
+  accountId: string;
+  payload: T;
+};
+
 export type BoardType = 'DARTSLIVE_ZERO' | 'QUIET_SOFT' | 'CORK' | 'OTHER';
 
 export type NormalizedPoint = {
@@ -217,6 +268,7 @@ export type PracticeMenu = {
 };
 
 export type UserProfile = {
+  accountId?: string;
   rating: number;
   level: SkillLevelId;
   machineType: DartMachine;
@@ -225,6 +277,7 @@ export type UserProfile = {
 
 export type PracticeRecord = {
   id: string;
+  accountId?: string;
   date: string;
   practiceMenuId: string;
   practiceMenuName: string;
@@ -249,7 +302,11 @@ export type PracticeFilterState = {
 };
 
 export type AppState = {
-  schemaVersion: 9;
+  schemaVersion: 10;
+  accounts: LocalAccount[];
+  activeAccountId: string | null;
+  accountLockEnabled: boolean;
+  commonOutbox: CommonOutboxItem[];
   profile: UserProfile | null;
   records: PracticeRecord[];
   favoritePracticeMenuIds: string[];
@@ -264,6 +321,10 @@ export type AppState = {
 export type LegacyStoredState = {
   profile: UserProfile | null;
   records: PracticeRecord[];
+  accounts?: LocalAccount[];
+  activeAccountId?: string | null;
+  accountLockEnabled?: boolean;
+  commonOutbox?: CommonOutboxItem[];
   favoritePracticeMenuIds?: string[];
   practiceFilterState?: PracticeFilterState;
   consultHistories?: ConsultHistory[];

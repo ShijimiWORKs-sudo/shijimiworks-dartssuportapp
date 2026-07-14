@@ -1,7 +1,7 @@
 import type { Condition, DartMachine, PracticeGame, PracticeRecord, UserProfile } from '../types';
 
 export function buildRecord(overrides: Partial<PracticeRecord> = {}): PracticeRecord {
-  return {
+  const record: PracticeRecord = {
     id: overrides.id ?? `record-${Math.random()}`,
     date: overrides.date ?? daysAgo(0),
     practiceMenuId: overrides.practiceMenuId ?? 'beginner-bull-count-up-12',
@@ -14,15 +14,27 @@ export function buildRecord(overrides: Partial<PracticeRecord> = {}): PracticeRe
     condition: overrides.condition ?? 'normal',
     memo: overrides.memo ?? '',
   };
+
+  if (overrides.accountId !== undefined) {
+    record.accountId = overrides.accountId;
+  }
+
+  return record;
 }
 
 export function buildProfile(overrides: Partial<UserProfile> = {}): UserProfile {
-  return {
+  const profile: UserProfile = {
     rating: overrides.rating ?? 7,
     level: overrides.level ?? 'intermediate',
     machineType: overrides.machineType ?? 'BOTH',
     mainProblems: overrides.mainProblems ?? ['ブル率が低い'],
   };
+
+  if (overrides.accountId !== undefined) {
+    profile.accountId = overrides.accountId;
+  }
+
+  return profile;
 }
 
 export function daysAgo(days: number) {

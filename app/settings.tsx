@@ -23,6 +23,12 @@ const legalLinks = [
   { label: '利用規約', href: '/legal/terms' },
   { label: 'クレジット', href: '/legal/credits' },
 ] as const;
+const accountLinks = [
+  { label: 'Account', href: '/account' },
+  { label: 'セキュリティ', href: '/account/security' },
+  { label: 'JSON Export', href: '/account/export' },
+  { label: 'JSON Import', href: '/account/import' },
+] as const;
 
 export default function SettingsScreen() {
   const { backgroundTheme, isLoading, profile, uiTheme } = useAppState();
@@ -199,6 +205,28 @@ function SettingsForm({ backgroundTheme, profile, uiTheme }: SettingsFormProps) 
                 <Text style={styles.backgroundLabel}>{item.label}</Text>
                 <Text style={styles.backgroundValue}>{item.hex}</Text>
               </View>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle
+          title="Account"
+          subtitle="ローカルAccount、PIN、共通JSONを管理します。"
+          tone="card"
+        />
+        <View style={styles.legalList}>
+          {accountLinks.map((item) => (
+            <Pressable
+              key={item.href}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.label}を開く`}
+              onPress={() => router.push(item.href)}
+              style={({ pressed }) => [styles.legalLink, pressed && styles.pressed]}
+            >
+              <Text style={styles.legalLabel}>{item.label}</Text>
+              <Text style={styles.legalArrow}>▶</Text>
             </Pressable>
           ))}
         </View>
