@@ -18,19 +18,24 @@ import {
   type ThemeColors,
   themes,
 } from '../constants/theme';
+import { getPracticeMenuById } from '../constants/practiceMenus';
 import type {
+  ActivePracticeSession,
   AnalysisSummary,
   AppState,
   BackgroundTheme,
   BoardReferenceImage,
   BoardType,
   CommonOutboxItem,
+  CommonOutboxEventType,
   ConsultHistory,
+  DartMachine,
   FormPhotoAdviceResult,
   LocalAccount,
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
+  TodayPracticeItem,
   UiTheme,
   UserProfile,
 } from '../types';
@@ -57,6 +62,7 @@ import {
 import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
 import {
   defaultPracticeFilterState,
+  defaultTodayPracticeDurationMinutes,
   migrateAppState,
   normalizePracticeFilterState,
   schemaVersion,
@@ -66,6 +72,22 @@ import {
   deleteFormPhotoAdviceHistory,
   sortFormPhotoAdviceHistories,
 } from '../utils/formPhotoAdviceHistory';
+import {
+  addTodayPracticeItem,
+  calculateTodayPracticeProgress,
+  cancelPracticeSession,
+  completePracticeSession,
+  getLocalDateKey,
+  getRunningPracticeSession,
+  getTodayPracticeItems,
+  pausePracticeSession,
+  reorderTodayPracticeItem,
+  resumePracticeSession,
+  startPracticeSession,
+  type AddTodayPracticeInput,
+  type CompleteTodayPracticeInput,
+  type TodayPracticeProgress,
+} from '../features/practice/today/application/todayPracticeService';
 
 const appStateStorageKey = 'DartsSupportApp:appState';
 const profileStorageKey = 'DartsSupportApp:userProfile';
@@ -80,6 +102,9 @@ type AppStateContextValue = {
   accountLockEnabled: boolean;
   isAccountSessionLocked: boolean;
   commonOutbox: CommonOutboxItem[];
+  todayPracticeItems: TodayPracticeItem[];
+  activePracticeSessions: ActivePracticeSession[];
+  todayPracticeDefaultDurationMinutes: number;
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
@@ -108,6 +133,24 @@ type AppStateContextValue = {
   lockSession: () => void;
   unlockSession: (accountId: string, pin: string) => Promise<boolean>;
   importCommonEnvelopeJson: (jsonText: string) => Promise<CommonImportApplyResult>;
+  addTodayPractice: (input: Omit<AddTodayPracticeInput, 'accountId'>) => Promise<TodayPracticeItem>;
+  reorderTodayPractice: (id: string, direction: 'up' | 'down' | 'first' | 'last') => Promise<void>;
+  startTodayPractice: (
+    id: string,
+    pauseExisting?: boolean,
+  ) => Promise<ActivePracticeSession | null>;
+  pauseTodayPractice: (id: string) => Promise<void>;
+  resumeTodayPractice: (id: string) => Promise<void>;
+  completeTodayPractice: (
+    id: string,
+    input: CompleteTodayPracticeInput,
+  ) => Promise<PracticeRecord | null>;
+  cancelTodayPractice: (id: string, keepElapsed: boolean) => Promise<void>;
+  getTodayPracticeItemsForDate: (practiceDate?: string) => TodayPracticeItem[];
+  getTodayPracticeProgressForDate: (practiceDate?: string) => TodayPracticeProgress;
+  getTodayPracticeItemById: (id: string) => TodayPracticeItem | null;
+  getActivePracticeSessionByItemId: (id: string) => ActivePracticeSession | null;
+  getRunningTodayPracticeSession: () => ActivePracticeSession | null;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
@@ -143,6 +186,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [accountLockEnabled, setAccountLockEnabled] = useState(false);
   const [isAccountSessionLocked, setIsAccountSessionLocked] = useState(false);
   const [commonOutbox, setCommonOutbox] = useState<CommonOutboxItem[]>([]);
+  const [todayPracticeItems, setTodayPracticeItems] = useState<TodayPracticeItem[]>([]);
+  const [activePracticeSessions, setActivePracticeSessions] = useState<ActivePracticeSession[]>([]);
+  const [todayPracticeDefaultDurationMinutes] = useState(defaultTodayPracticeDurationMinutes);
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
   const [formPhotoAdviceResults, setFormPhotoAdviceResults] = useState<FormPhotoAdviceResult[]>([]);
@@ -179,6 +225,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setActiveAccountIdState(migratedState.activeAccountId);
         setAccountLockEnabled(migratedState.accountLockEnabled);
         setCommonOutbox(sortCommonOutbox(migratedState.commonOutbox));
+        setTodayPracticeItems(sortTodayPracticeItems(migratedState.todayPracticeItems));
+        setActivePracticeSessions(sortActivePracticeSessions(migratedState.activePracticeSessions));
         setIsAccountSessionLocked(
           Boolean(
             migratedState.accountLockEnabled &&
@@ -225,6 +273,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         activeAccountId,
         accountLockEnabled,
         commonOutbox,
+        todayPracticeItems,
+        activePracticeSessions,
+        todayPracticeDefaultDurationMinutes,
         profile,
         records,
         favoritePracticeMenuIds,
@@ -243,6 +294,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       accounts,
       activeAccountId,
       accountLockEnabled,
+      activePracticeSessions,
       backgroundTheme,
       boardReferenceImages,
       commonOutbox,
@@ -252,6 +304,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       practiceFilterState,
       profile,
       records,
+      todayPracticeDefaultDurationMinutes,
+      todayPracticeItems,
       uiTheme,
     ],
   );
@@ -549,6 +603,283 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [accounts, activeAccountId, persistCurrentState, records],
   );
 
+  const addTodayPractice = useCallback(
+    async (input: Omit<AddTodayPracticeInput, 'accountId'>) => {
+      const nextItem = addTodayPracticeItem(todayPracticeItems, {
+        ...input,
+        accountId: activeAccountId ?? undefined,
+      });
+      const nextItems = sortTodayPracticeItems([...todayPracticeItems, nextItem]);
+      const nextOutbox = nextItem.accountId
+        ? sortCommonOutbox([
+            createCommonOutboxItem({
+              eventType: 'today_practice_planned',
+              accountId: nextItem.accountId,
+              sourceRecordId: nextItem.id,
+              payload: {
+                todayPracticeItemId: nextItem.id,
+                practiceMenuId: nextItem.practiceMenuId,
+              },
+            }),
+            ...commonOutbox,
+          ])
+        : commonOutbox;
+
+      setTodayPracticeItems(nextItems);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({ todayPracticeItems: nextItems, commonOutbox: nextOutbox });
+
+      return nextItem;
+    },
+    [activeAccountId, commonOutbox, persistCurrentState, todayPracticeItems],
+  );
+
+  const reorderTodayPractice = useCallback(
+    async (id: string, direction: 'up' | 'down' | 'first' | 'last') => {
+      const nextItems = sortTodayPracticeItems(
+        reorderTodayPracticeItem(todayPracticeItems, id, direction),
+      );
+
+      setTodayPracticeItems(nextItems);
+      await persistCurrentState({ todayPracticeItems: nextItems });
+    },
+    [persistCurrentState, todayPracticeItems],
+  );
+
+  const startTodayPractice = useCallback(
+    async (id: string, pauseExisting = false) => {
+      const result = startPracticeSession({
+        items: todayPracticeItems,
+        sessions: activePracticeSessions,
+        todayPracticeItemId: id,
+        activeAccountId,
+        pauseExisting,
+      });
+      const nextItems = sortTodayPracticeItems(result.items);
+      const nextSessions = sortActivePracticeSessions(result.sessions);
+      const session = nextSessions.find((item) => item.todayPracticeItemId === id) ?? null;
+      const targetItem = nextItems.find((item) => item.id === id);
+      const nextOutbox =
+        targetItem?.accountId && session
+          ? sortCommonOutbox([
+              createCommonOutboxItem({
+                eventType: 'practice_session_started',
+                accountId: targetItem.accountId,
+                sourceRecordId: targetItem.id,
+                payload: {
+                  todayPracticeItemId: targetItem.id,
+                  practiceMenuId: targetItem.practiceMenuId,
+                },
+              }),
+              ...commonOutbox,
+            ])
+          : commonOutbox;
+
+      setTodayPracticeItems(nextItems);
+      setActivePracticeSessions(nextSessions);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        todayPracticeItems: nextItems,
+        activePracticeSessions: nextSessions,
+        commonOutbox: nextOutbox,
+      });
+
+      return session;
+    },
+    [
+      activeAccountId,
+      activePracticeSessions,
+      commonOutbox,
+      persistCurrentState,
+      todayPracticeItems,
+    ],
+  );
+
+  const pauseTodayPractice = useCallback(
+    async (id: string) => {
+      const result = pausePracticeSession({
+        items: todayPracticeItems,
+        sessions: activePracticeSessions,
+        todayPracticeItemId: id,
+      });
+      const nextItems = sortTodayPracticeItems(result.items);
+      const nextSessions = sortActivePracticeSessions(result.sessions);
+      const targetItem = nextItems.find((item) => item.id === id);
+      const nextOutbox = appendTodayPracticeOutbox(
+        commonOutbox,
+        targetItem,
+        'practice_session_paused',
+      );
+
+      setTodayPracticeItems(nextItems);
+      setActivePracticeSessions(nextSessions);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        todayPracticeItems: nextItems,
+        activePracticeSessions: nextSessions,
+        commonOutbox: nextOutbox,
+      });
+    },
+    [activePracticeSessions, commonOutbox, persistCurrentState, todayPracticeItems],
+  );
+
+  const resumeTodayPractice = useCallback(
+    async (id: string) => {
+      const result = resumePracticeSession({
+        items: todayPracticeItems,
+        sessions: activePracticeSessions,
+        todayPracticeItemId: id,
+      });
+      const nextItems = sortTodayPracticeItems(result.items);
+      const nextSessions = sortActivePracticeSessions(result.sessions);
+      const targetItem = nextItems.find((item) => item.id === id);
+      const nextOutbox = appendTodayPracticeOutbox(
+        commonOutbox,
+        targetItem,
+        'practice_session_resumed',
+      );
+
+      setTodayPracticeItems(nextItems);
+      setActivePracticeSessions(nextSessions);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        todayPracticeItems: nextItems,
+        activePracticeSessions: nextSessions,
+        commonOutbox: nextOutbox,
+      });
+    },
+    [activePracticeSessions, commonOutbox, persistCurrentState, todayPracticeItems],
+  );
+
+  const completeTodayPractice = useCallback(
+    async (id: string, input: CompleteTodayPracticeInput) => {
+      const result = completePracticeSession({
+        items: todayPracticeItems,
+        sessions: activePracticeSessions,
+        todayPracticeItemId: id,
+        result: input,
+      });
+      const nextItems = sortTodayPracticeItems(result.items);
+      const nextSessions = sortActivePracticeSessions(result.sessions);
+      const completedItem = nextItems.find((item) => item.id === id);
+      const menu = completedItem ? getPracticeMenuById(completedItem.practiceMenuId) : null;
+
+      if (!completedItem || !menu) {
+        return null;
+      }
+
+      const completedAt = completedItem.completedAt ?? new Date().toISOString();
+      const nextRecord: PracticeRecord = {
+        id: `${Date.now()}`,
+        accountId: completedItem.accountId ?? activeAccountId ?? undefined,
+        date: completedAt,
+        practiceMenuId: menu.id,
+        practiceMenuName: menu.title,
+        machineType: getRecordMachineType(profile?.machineType, menu.machineTypes),
+        gameType: menu.gameTypes[0] ?? 'OTHER',
+        score: completedItem.resultScore ?? 0,
+        bullCount: completedItem.resultBullCount ?? 0,
+        cricketMarks: 0,
+        condition: completedItem.resultCondition ?? 'normal',
+        memo: buildTodayPracticeMemo(completedItem),
+        durationSeconds: completedItem.actualDurationSeconds,
+        completedRounds: completedItem.completedRounds,
+        completedSets: completedItem.completedSets,
+        achievementRate: completedItem.achievementRate,
+        nextMemo: completedItem.nextMemo,
+        todayPracticeItemId: completedItem.id,
+      };
+      const nextRecords = sortRecords([nextRecord, ...records]);
+      const nextOutbox = appendTodayPracticeOutbox(
+        commonOutbox,
+        completedItem,
+        'practice_session_completed',
+        nextRecord.id,
+      );
+
+      setTodayPracticeItems(nextItems);
+      setActivePracticeSessions(nextSessions);
+      setRecords(nextRecords);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        todayPracticeItems: nextItems,
+        activePracticeSessions: nextSessions,
+        records: nextRecords,
+        commonOutbox: nextOutbox,
+      });
+
+      return nextRecord;
+    },
+    [
+      activeAccountId,
+      activePracticeSessions,
+      commonOutbox,
+      persistCurrentState,
+      profile?.machineType,
+      records,
+      todayPracticeItems,
+    ],
+  );
+
+  const cancelTodayPractice = useCallback(
+    async (id: string, keepElapsed: boolean) => {
+      const result = cancelPracticeSession({
+        items: todayPracticeItems,
+        sessions: activePracticeSessions,
+        todayPracticeItemId: id,
+        keepElapsed,
+      });
+      const nextItems = sortTodayPracticeItems(result.items);
+      const nextSessions = sortActivePracticeSessions(result.sessions);
+      const targetItem = nextItems.find((item) => item.id === id);
+      const nextOutbox = appendTodayPracticeOutbox(
+        commonOutbox,
+        targetItem,
+        'practice_session_cancelled',
+      );
+
+      setTodayPracticeItems(nextItems);
+      setActivePracticeSessions(nextSessions);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        todayPracticeItems: nextItems,
+        activePracticeSessions: nextSessions,
+        commonOutbox: nextOutbox,
+      });
+    },
+    [activePracticeSessions, commonOutbox, persistCurrentState, todayPracticeItems],
+  );
+
+  const getTodayPracticeItemsForDate = useCallback(
+    (practiceDate = getLocalDateKey()) =>
+      getTodayPracticeItems(todayPracticeItems, practiceDate, activeAccountId),
+    [activeAccountId, todayPracticeItems],
+  );
+
+  const getTodayPracticeProgressForDate = useCallback(
+    (practiceDate = getLocalDateKey()) =>
+      calculateTodayPracticeProgress(
+        getTodayPracticeItems(todayPracticeItems, practiceDate, activeAccountId),
+      ),
+    [activeAccountId, todayPracticeItems],
+  );
+
+  const getTodayPracticeItemById = useCallback(
+    (id: string) => todayPracticeItems.find((item) => item.id === id) ?? null,
+    [todayPracticeItems],
+  );
+
+  const getActivePracticeSessionByItemId = useCallback(
+    (id: string) =>
+      activePracticeSessions.find((session) => session.todayPracticeItemId === id) ?? null,
+    [activePracticeSessions],
+  );
+
+  const getRunningTodayPracticeSession = useCallback(
+    () => getRunningPracticeSession(activePracticeSessions, activeAccountId),
+    [activeAccountId, activePracticeSessions],
+  );
+
   const addPracticeRecord = useCallback(
     async (recordInput: PracticeRecordInput) => {
       const nextRecord: PracticeRecord = {
@@ -797,6 +1128,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       accountLockEnabled,
       isAccountSessionLocked,
       commonOutbox,
+      todayPracticeItems,
+      activePracticeSessions,
+      todayPracticeDefaultDurationMinutes,
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
@@ -821,6 +1155,18 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       lockSession,
       unlockSession,
       importCommonEnvelopeJson,
+      addTodayPractice,
+      reorderTodayPractice,
+      startTodayPractice,
+      pauseTodayPractice,
+      resumeTodayPractice,
+      completeTodayPractice,
+      cancelTodayPractice,
+      getTodayPracticeItemsForDate,
+      getTodayPracticeProgressForDate,
+      getTodayPracticeItemById,
+      getActivePracticeSessionByItemId,
+      getRunningTodayPracticeSession,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -853,6 +1199,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       accountLockEnabled,
       isAccountSessionLocked,
       commonOutbox,
+      todayPracticeItems,
+      activePracticeSessions,
+      todayPracticeDefaultDurationMinutes,
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
@@ -877,6 +1226,18 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       lockSession,
       unlockSession,
       importCommonEnvelopeJson,
+      addTodayPractice,
+      reorderTodayPractice,
+      startTodayPractice,
+      pauseTodayPractice,
+      resumeTodayPractice,
+      completeTodayPractice,
+      cancelTodayPractice,
+      getTodayPracticeItemsForDate,
+      getTodayPracticeProgressForDate,
+      getTodayPracticeItemById,
+      getActivePracticeSessionByItemId,
+      getRunningTodayPracticeSession,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -922,6 +1283,8 @@ async function persistAppState(appState: AppState) {
       ...appState,
       accounts: sortAccounts(appState.accounts),
       commonOutbox: sortCommonOutbox(appState.commonOutbox),
+      todayPracticeItems: sortTodayPracticeItems(appState.todayPracticeItems),
+      activePracticeSessions: sortActivePracticeSessions(appState.activePracticeSessions),
       records: sortRecords(appState.records),
       consultHistories: sortConsultHistories(appState.consultHistories),
       formPhotoAdviceResults: sortFormPhotoAdviceHistories(appState.formPhotoAdviceResults),
@@ -971,6 +1334,76 @@ function sortCommonOutbox(items: CommonOutboxItem[]) {
   return [...items].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+}
+
+function sortTodayPracticeItems(items: TodayPracticeItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.practiceDate !== b.practiceDate) {
+      return b.practiceDate.localeCompare(a.practiceDate);
+    }
+
+    return a.order - b.order;
+  });
+}
+
+function sortActivePracticeSessions(sessions: ActivePracticeSession[]) {
+  return [...sessions].sort(
+    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+  );
+}
+
+function appendTodayPracticeOutbox(
+  commonOutbox: CommonOutboxItem[],
+  item: TodayPracticeItem | undefined,
+  eventType: CommonOutboxEventType,
+  sourceRecordId?: string,
+) {
+  if (!item?.accountId) {
+    return commonOutbox;
+  }
+
+  const event = createCommonOutboxItem({
+    eventType,
+    accountId: item.accountId,
+    sourceRecordId: sourceRecordId ?? item.id,
+    occurredAt: item.updatedAt,
+    payload: {
+      todayPracticeItemId: item.id,
+      practiceMenuId: item.practiceMenuId,
+    },
+  });
+
+  return sortCommonOutbox([
+    {
+      ...event,
+      payload: {
+        ...event.payload,
+        eventId: event.outboxId,
+      },
+    },
+    ...commonOutbox,
+  ]);
+}
+
+function getRecordMachineType(
+  profileMachineType: DartMachine | undefined,
+  menuMachineTypes: DartMachine[],
+): Exclude<DartMachine, 'BOTH'> {
+  if (profileMachineType && profileMachineType !== 'BOTH') {
+    return profileMachineType;
+  }
+
+  return menuMachineTypes.find((machineType) => machineType !== 'BOTH') ?? 'DARTSLIVE';
+}
+
+function buildTodayPracticeMemo(item: TodayPracticeItem) {
+  const fragments = [
+    item.note ? `メモ: ${item.note}` : null,
+    item.achievementRate !== undefined ? `達成率: ${item.achievementRate}%` : null,
+    item.nextMemo ? `次回: ${item.nextMemo}` : null,
+  ].filter(Boolean);
+
+  return fragments.length > 0 ? fragments.join('\n') : '今日の練習から保存';
 }
 
 function getStartOfWeek(date: Date) {

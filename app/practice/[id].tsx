@@ -16,8 +16,12 @@ import type { PracticeRecord } from '../../types';
 export default function PracticeMenuDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { getRecordsByPracticeMenuId, isFavoritePracticeMenu, toggleFavoritePracticeMenu } =
-    useAppState();
+  const {
+    getRecordsByPracticeMenuId,
+    isFavoritePracticeMenu,
+    toggleFavoritePracticeMenu,
+    addTodayPractice,
+  } = useAppState();
   const menu = id ? getPracticeMenuById(id) : null;
   const menuRecords = menu ? getRecordsByPracticeMenuId(menu.id) : [];
   const latestRecord = menuRecords[0] ?? null;
@@ -45,6 +49,15 @@ export default function PracticeMenuDetailScreen() {
         label={isFavoritePracticeMenu(menu.id) ? '★ 登録済み' : '☆ お気に入り'}
         onPress={() => void toggleFavoritePracticeMenu(menu.id)}
         variant="secondary"
+      />
+      <AppButton
+        label="今日の練習に追加"
+        onPress={() =>
+          void addTodayPractice({
+            practiceMenuId: menu.id,
+            plannedDurationMinutes: menu.durationMinutes,
+          }).then(() => router.push('/practice/today'))
+        }
       />
 
       <Card muted>
@@ -158,7 +171,7 @@ export default function PracticeMenuDetailScreen() {
       />
       <AppButton
         label="今日の練習へ戻る"
-        onPress={() => router.push('/practice')}
+        onPress={() => router.push('/practice/today')}
         variant="secondary"
       />
     </ScreenShell>

@@ -56,6 +56,23 @@ export default function RecordDetailScreen() {
         <DetailRow label="ブル数" value={String(record.bullCount)} />
         <DetailRow label="クリケットマーク数" value={String(record.cricketMarks)} />
         <DetailRow label="調子" value={conditionLabels[record.condition]} />
+        {record.todayPracticeItemId ? (
+          <>
+            <DetailRow label="入力元" value="今日の練習" />
+            <DetailRow
+              label="実施時間"
+              value={
+                record.durationSeconds !== undefined
+                  ? `${Math.floor(record.durationSeconds / 60)}分`
+                  : '未入力'
+              }
+            />
+            <DetailRow
+              label="達成率"
+              value={record.achievementRate !== undefined ? `${record.achievementRate}%` : '未入力'}
+            />
+          </>
+        ) : null}
         <View style={styles.memoBlock}>
           <Text style={styles.label}>メモ</Text>
           <Text style={styles.memo}>{record.memo || 'メモはありません。'}</Text>

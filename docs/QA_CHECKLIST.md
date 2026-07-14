@@ -61,7 +61,8 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 ## 練習メニュー
 
 - [ ] 今日の練習表示確認
-- [ ] `/practice` が表示される
+- [ ] BottomNavの練習から `/practice/today` へ遷移できる
+- [ ] `/practice` が練習メニューDBとして表示される
 - [ ] おすすめ練習と補助練習が表示される
 - [ ] フィルタを切り替えられる
 - [ ] お気に入り登録/解除できる
@@ -69,6 +70,22 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 - [ ] ▶ボタンで詳細遷移確認
 - [ ] 練習詳細から記録入力へ遷移できる
 - [ ] メニュー別記録一覧が空でもクラッシュしない
+
+## 今日の練習・実施管理
+
+- [ ] `/practice/today` が空データでも表示される
+- [ ] `/practice/today/select` で練習メニューを検索できる
+- [ ] レベル、ゲーム、機種フィルタで追加候補を絞り込める
+- [ ] メニューを今日の練習へ追加できる
+- [ ] 今日の練習の順番を上下に動かせる
+- [ ] 1件だけ実施中にできる
+- [ ] 別メニュー開始時に既存の実施中メニューが一時停止される
+- [ ] タイマーの開始、一時停止、再開ができる
+- [ ] 中止してもアプリがクラッシュしない
+- [ ] 完了入力で実施時間、完了R/セット、スコア、Bull数、調子、メモ、次回メモを保存できる
+- [ ] 保存後 `/analysis` へ遷移する
+- [ ] 保存した記録が `/records` と `/records/[id]` に表示される
+- [ ] 正式な01/CRICKET対戦、MATCH、BUST、プレイヤー交代処理が表示されない
 
 ## 練習記録
 
@@ -229,7 +246,7 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 
 ## Migration
 
-- [ ] schemaVersion 1〜9 相当の既存データで起動してもクラッシュしない
+- [ ] schemaVersion 1〜10 相当の既存データで起動してもクラッシュしない
 - [ ] 既存のプロフィールが残る
 - [ ] 既存の練習記録が残る
 - [ ] お気に入りとフィルタ条件が残る
@@ -244,6 +261,9 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 - [ ] `activeAccountId` が `null` で補完される
 - [ ] `accountLockEnabled` が `false` で補完される
 - [ ] `commonOutbox` が空配列で補完される
+- [ ] `todayPracticeItems` が空配列で補完される
+- [ ] `activePracticeSessions` が空配列で補完される
+- [ ] `todayPracticeDefaultDurationMinutes` が20で補完される
 - [ ] migrationを再実行してもAccountやOutboxが重複しない
 
 ## Theme and Navigation

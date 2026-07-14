@@ -8,7 +8,7 @@ Expo Router のルート画面を配置します。
 
 - `app/index.tsx`: 初期設定
 - `app/home.tsx`: ホーム
-- `app/practice*.tsx`: 練習メニューと履歴
+- `app/practice*.tsx`: 練習メニュー、今日の練習管理、実施タイマー、履歴
 - `app/record.tsx`: 練習記録入力
 - `app/records*.tsx`: 練習記録一覧/詳細/編集
 - `app/photo-score*.tsx`: 写真スコア記録、基準画像登録、候補選択、結果保存
@@ -89,6 +89,14 @@ Expo Router のルート画面を配置します。
 - `commonContractMapper.ts`: Darts共通JSON Export形式への変換、秘密情報除外、Import envelope検証
 - `commonContractImport.ts`: Import JSON preview、Account/練習記録の変換、既存記録とのmerge
 
+## features/practice/today/
+
+今日の練習・実施管理のアプリ内ロジック境界です。
+
+- `todayPracticeService.ts`: 今日の練習追加、並び替え、進捗計算、開始/一時停止/再開/完了/中止、実施秒数計算
+- 正式な01ゲームエンジン、STANDARD CRICKET対戦、MATCH、BUST、プレイヤー交代処理は扱わない
+- 完了時は `PracticeRecord` へ変換し、既存の分析ロジックへ流す
+
 ## tests/
 
 Node.js built-in test runner で pure TypeScript ロジックを検証します。
@@ -114,11 +122,14 @@ AsyncStorage key:
 
 ```ts
 {
-  schemaVersion: 10,
+  schemaVersion: 11,
   accounts: LocalAccount[],
   activeAccountId: string | null,
   accountLockEnabled: boolean,
   commonOutbox: CommonOutboxItem[],
+  todayPracticeItems: TodayPracticeItem[],
+  activePracticeSessions: ActivePracticeSession[],
+  todayPracticeDefaultDurationMinutes: number,
   profile: UserProfile | null,
   records: PracticeRecord[], // photoScore?: PhotoScoreEntry を含む場合あり
   favoritePracticeMenuIds: string[],
@@ -130,6 +141,26 @@ AsyncStorage key:
   backgroundTheme: 'black' | 'brown' | 'purple' | 'orange' | 'white'
 }
 ```
+
+## schemaVersion 11
+
+schemaVersion 11 では、今日の練習・実施管理MVPとして以下を追加しています。
+
+- `TodayPracticeItem[]`: 今日の練習リスト、順番、予定時間、実施状態、完了結果
+- `ActivePracticeSession[]`: 実施中/一時停止中セッション。実施秒数は `startedAt`、`lastResumedAt`、`accumulatedSeconds` から算出
+- `todayPracticeDefaultDurationMinutes`: 今日の練習追加時の既定時間
+- `PracticeRecord.durationSeconds`、`completedRounds`、`completedSets`、`achievementRate`、`nextMemo`、`todayPracticeItemId`
+- Outbox event: `today_practice_planned`、`practice_session_started`、`practice_session_paused`、`practice_session_resumed`、`practice_session_cancelled`
+
+完了時には `practice_session_completed` を既存の練習記録イベントとして利用します。Account未登録時はOutboxを作らず、既存OWNER互換として `accountId` 未設定のまま動作します。
+
+今日の練習MVPは練習支援用途に限定し、正式ゲーム進行や対戦ルールは実装しません。
+
+Migration方針:
+
+- schemaVersion 1〜10 は `todayPracticeItems: []`、`activePracticeSessions: []`、`todayPracticeDefaultDurationMinutes: 20` を補完
+- 既存のプロフィール、練習記録、相談履歴、写真スコア、フォーム写真相談、Account、Outbox、基準画像は維持
+- migrationは前進・冪等で、壊れたJSONはlegacy/default値へフォールバック
 
 ## schemaVersion 10
 
@@ -150,7 +181,12 @@ CommonEvent / Outbox:
 
 - `account_created`
 - `account_profile_updated`
+- `today_practice_planned`
+- `practice_session_started`
+- `practice_session_paused`
+- `practice_session_resumed`
 - `practice_session_completed`
+- `practice_session_cancelled`
 - `consultation_saved`
 - `record_deleted`
 

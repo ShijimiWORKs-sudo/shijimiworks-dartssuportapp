@@ -14,6 +14,7 @@ type PracticeMenuCardProps = {
   isFavorite?: boolean;
   onViewDetails: () => void;
   onRecord: () => void;
+  onAddToday?: () => void;
   onToggleFavorite?: () => void;
 };
 
@@ -23,6 +24,7 @@ export function PracticeMenuCard({
   isFavorite = false,
   onViewDetails,
   onRecord,
+  onAddToday,
   onToggleFavorite,
 }: PracticeMenuCardProps) {
   return (
@@ -59,6 +61,9 @@ export function PracticeMenuCard({
             onPress={onViewDetails}
           />
         </View>
+        {onAddToday ? (
+          <AppButton label="今日に追加" onPress={onAddToday} variant="secondary" />
+        ) : null}
         <AppButton label="この練習を記録" onPress={onRecord} />
       </View>
     </Card>
