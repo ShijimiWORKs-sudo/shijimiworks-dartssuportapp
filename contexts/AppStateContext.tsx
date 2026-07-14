@@ -24,14 +24,36 @@ import type {
   BackgroundTheme,
   BoardReferenceImage,
   BoardType,
+  CommonOutboxItem,
   ConsultHistory,
   FormPhotoAdviceResult,
+  LocalAccount,
   PracticeFilterState,
   PracticeRecord,
   PracticeRecordInput,
   UiTheme,
   UserProfile,
 } from '../types';
+import {
+  createCommonOutboxItem,
+  createLocalAccount,
+  deleteLocalAccount,
+  type RegisterLocalAccountInput,
+  updateLocalAccount,
+  type UpdateLocalAccountInput,
+} from '../features/account/application/accountService';
+import {
+  mapCommonImportAccount,
+  mapCommonImportPracticeRecords,
+  mergeImportedPracticeRecords,
+  parseCommonImportJson,
+  type CommonImportApplyResult,
+} from '../features/account/application/commonContractImport';
+import {
+  deleteAccountPin,
+  setAccountPin,
+  verifyAccountPin,
+} from '../features/account/application/pinService';
 import { calculateAnalysisSummary } from '../utils/analyzePracticeRecords';
 import {
   defaultPracticeFilterState,
@@ -53,6 +75,11 @@ type AppStateContextValue = {
   isLoading: boolean;
   profile: UserProfile | null;
   records: PracticeRecord[];
+  accounts: LocalAccount[];
+  activeAccountId: string | null;
+  accountLockEnabled: boolean;
+  isAccountSessionLocked: boolean;
+  commonOutbox: CommonOutboxItem[];
   favoritePracticeMenuIds: string[];
   practiceFilterState: PracticeFilterState;
   consultHistories: ConsultHistory[];
@@ -70,6 +97,17 @@ type AppStateContextValue = {
   ) => Promise<void>;
   saveUiTheme: (uiTheme: UiTheme) => Promise<void>;
   saveBackgroundTheme: (backgroundTheme: BackgroundTheme) => Promise<void>;
+  registerLocalAccount: (input: RegisterLocalAccountInput, pin?: string) => Promise<LocalAccount>;
+  updateLocalAccountProfile: (accountId: string, input: UpdateLocalAccountInput) => Promise<void>;
+  deleteLocalAccountById: (accountId: string) => Promise<void>;
+  setActiveLocalAccount: (accountId: string) => Promise<void>;
+  enablePinLock: (accountId: string, pin: string) => Promise<void>;
+  verifyPin: (accountId: string, pin: string) => Promise<boolean>;
+  changePin: (accountId: string, oldPin: string, newPin: string) => Promise<boolean>;
+  disablePinLock: (accountId: string, pin: string) => Promise<boolean>;
+  lockSession: () => void;
+  unlockSession: (accountId: string, pin: string) => Promise<boolean>;
+  importCommonEnvelopeJson: (jsonText: string) => Promise<CommonImportApplyResult>;
   addPracticeRecord: (record: PracticeRecordInput) => Promise<void>;
   updatePracticeRecord: (id: string, record: PracticeRecordInput) => Promise<void>;
   deletePracticeRecord: (id: string) => Promise<void>;
@@ -88,6 +126,7 @@ type AppStateContextValue = {
   getWeeklyPracticeCount: () => number;
   getLatestRecord: () => PracticeRecord | null;
   getAnalysisSummary: () => AnalysisSummary;
+  getActiveAccount: () => LocalAccount | null;
   getConsultHistoryById: (id: string) => ConsultHistory | null;
   getFormPhotoAdviceResultById: (id: string) => FormPhotoAdviceResult | null;
   getBoardReferenceImageByBoardType: (boardType: BoardType) => BoardReferenceImage | null;
@@ -99,6 +138,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [records, setRecords] = useState<PracticeRecord[]>([]);
+  const [accounts, setAccounts] = useState<LocalAccount[]>([]);
+  const [activeAccountId, setActiveAccountIdState] = useState<string | null>(null);
+  const [accountLockEnabled, setAccountLockEnabled] = useState(false);
+  const [isAccountSessionLocked, setIsAccountSessionLocked] = useState(false);
+  const [commonOutbox, setCommonOutbox] = useState<CommonOutboxItem[]>([]);
   const [favoritePracticeMenuIds, setFavoritePracticeMenuIds] = useState<string[]>([]);
   const [consultHistories, setConsultHistories] = useState<ConsultHistory[]>([]);
   const [formPhotoAdviceResults, setFormPhotoAdviceResults] = useState<FormPhotoAdviceResult[]>([]);
@@ -131,6 +175,21 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
         setProfile(migratedState.profile);
         setRecords(sortRecords(migratedState.records));
+        setAccounts(sortAccounts(migratedState.accounts));
+        setActiveAccountIdState(migratedState.activeAccountId);
+        setAccountLockEnabled(migratedState.accountLockEnabled);
+        setCommonOutbox(sortCommonOutbox(migratedState.commonOutbox));
+        setIsAccountSessionLocked(
+          Boolean(
+            migratedState.accountLockEnabled &&
+            migratedState.activeAccountId &&
+            migratedState.accounts.find(
+              (account) =>
+                account.accountId === migratedState.activeAccountId &&
+                account.authMode === 'local_pin',
+            ),
+          ),
+        );
         setFavoritePracticeMenuIds(migratedState.favoritePracticeMenuIds);
         setPracticeFilterState(migratedState.practiceFilterState);
         setConsultHistories(sortConsultHistories(migratedState.consultHistories));
@@ -162,6 +221,10 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     async (overrides: Partial<Omit<AppState, 'schemaVersion'>>) => {
       const nextState: AppState = {
         schemaVersion,
+        accounts,
+        activeAccountId,
+        accountLockEnabled,
+        commonOutbox,
         profile,
         records,
         favoritePracticeMenuIds,
@@ -177,8 +240,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       await persistAppState(nextState);
     },
     [
+      accounts,
+      activeAccountId,
+      accountLockEnabled,
       backgroundTheme,
       boardReferenceImages,
+      commonOutbox,
       consultHistories,
       favoritePracticeMenuIds,
       formPhotoAdviceResults,
@@ -193,19 +260,21 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     async (profileInput: Omit<UserProfile, 'level'>) => {
       const nextProfile: UserProfile = {
         ...profileInput,
+        accountId: profile?.accountId,
         level: getLevelFromRating(profileInput.rating),
       };
 
       setProfile(nextProfile);
       await persistCurrentState({ profile: nextProfile });
     },
-    [persistCurrentState],
+    [persistCurrentState, profile?.accountId],
   );
 
   const saveProfileAndUiTheme = useCallback(
     async (profileInput: Omit<UserProfile, 'level'>, nextUiTheme: UiTheme) => {
       const nextProfile: UserProfile = {
         ...profileInput,
+        accountId: profile?.accountId,
         level: getLevelFromRating(profileInput.rating),
       };
 
@@ -213,7 +282,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       setUiTheme(nextUiTheme);
       await persistCurrentState({ profile: nextProfile, uiTheme: nextUiTheme });
     },
-    [persistCurrentState],
+    [persistCurrentState, profile?.accountId],
   );
 
   const saveProfileAndDisplaySettings = useCallback(
@@ -224,6 +293,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     ) => {
       const nextProfile: UserProfile = {
         ...profileInput,
+        accountId: profile?.accountId,
         level: getLevelFromRating(profileInput.rating),
       };
 
@@ -236,7 +306,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         backgroundTheme: nextBackgroundTheme,
       });
     },
-    [persistCurrentState],
+    [persistCurrentState, profile?.accountId],
   );
 
   const saveUiTheme = useCallback(
@@ -255,19 +325,258 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [persistCurrentState],
   );
 
+  const registerLocalAccount = useCallback(
+    async (input: RegisterLocalAccountInput, pin?: string) => {
+      const nextAccount = createLocalAccount(input, accounts);
+
+      if (input.pinEnabled) {
+        if (!pin) {
+          throw new Error('PINを入力してください。');
+        }
+
+        await setAccountPin(nextAccount.accountId, pin);
+      }
+
+      const nextAccounts = sortAccounts([nextAccount, ...accounts]);
+      const nextProfile = profile
+        ? {
+            ...profile,
+            accountId: nextAccount.accountId,
+          }
+        : profile;
+      const nextOutbox = sortCommonOutbox([
+        createCommonOutboxItem({
+          eventType: 'account_created',
+          accountId: nextAccount.accountId,
+          payload: { userName: nextAccount.userName },
+        }),
+        ...commonOutbox,
+      ]);
+
+      setAccounts(nextAccounts);
+      setActiveAccountIdState(nextAccount.accountId);
+      setProfile(nextProfile);
+      setAccountLockEnabled(input.pinEnabled);
+      setIsAccountSessionLocked(false);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        accounts: nextAccounts,
+        activeAccountId: nextAccount.accountId,
+        accountLockEnabled: input.pinEnabled,
+        profile: nextProfile,
+        commonOutbox: nextOutbox,
+      });
+
+      return nextAccount;
+    },
+    [accounts, commonOutbox, persistCurrentState, profile],
+  );
+
+  const updateLocalAccountProfile = useCallback(
+    async (accountId: string, input: UpdateLocalAccountInput) => {
+      const targetAccount = accounts.find((account) => account.accountId === accountId);
+
+      if (!targetAccount) {
+        return;
+      }
+
+      const nextAccount = updateLocalAccount(targetAccount, input, accounts);
+      const nextAccounts = sortAccounts(
+        accounts.map((account) => (account.accountId === accountId ? nextAccount : account)),
+      );
+      const nextOutbox = sortCommonOutbox([
+        createCommonOutboxItem({
+          eventType: 'account_profile_updated',
+          accountId,
+          payload: { userName: nextAccount.userName },
+        }),
+        ...commonOutbox,
+      ]);
+
+      setAccounts(nextAccounts);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({ accounts: nextAccounts, commonOutbox: nextOutbox });
+    },
+    [accounts, commonOutbox, persistCurrentState],
+  );
+
+  const deleteLocalAccountById = useCallback(
+    async (accountId: string) => {
+      const targetAccount = accounts.find((account) => account.accountId === accountId);
+
+      if (!targetAccount) {
+        return;
+      }
+
+      await deleteAccountPin(accountId);
+
+      const nextAccounts = sortAccounts(
+        accounts.map((account) =>
+          account.accountId === accountId ? deleteLocalAccount(account) : account,
+        ),
+      );
+      const nextOutbox = sortCommonOutbox([
+        createCommonOutboxItem({
+          eventType: 'record_deleted',
+          accountId,
+          payload: { entity: 'account', logicalDelete: true },
+        }),
+        ...commonOutbox,
+      ]);
+      const nextActiveAccountId = activeAccountId === accountId ? null : activeAccountId;
+
+      setAccounts(nextAccounts);
+      setActiveAccountIdState(nextActiveAccountId);
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({
+        accounts: nextAccounts,
+        activeAccountId: nextActiveAccountId,
+        commonOutbox: nextOutbox,
+      });
+    },
+    [accounts, activeAccountId, commonOutbox, persistCurrentState],
+  );
+
+  const setActiveLocalAccount = useCallback(
+    async (accountId: string) => {
+      const nextActiveAccount = accounts.find((account) => account.accountId === accountId);
+
+      if (!nextActiveAccount || nextActiveAccount.deletedAt) {
+        return;
+      }
+
+      setActiveAccountIdState(accountId);
+      setIsAccountSessionLocked(accountLockEnabled && nextActiveAccount.authMode === 'local_pin');
+      await persistCurrentState({ activeAccountId: accountId });
+    },
+    [accountLockEnabled, accounts, persistCurrentState],
+  );
+
+  const enablePinLock = useCallback(
+    async (accountId: string, pin: string) => {
+      await setAccountPin(accountId, pin);
+      await updateLocalAccountProfile(accountId, { authMode: 'local_pin' });
+      setAccountLockEnabled(true);
+      setIsAccountSessionLocked(false);
+      await persistCurrentState({ accountLockEnabled: true });
+    },
+    [persistCurrentState, updateLocalAccountProfile],
+  );
+
+  const verifyPin = useCallback(
+    async (accountId: string, pin: string) => verifyAccountPin(accountId, pin),
+    [],
+  );
+
+  const changePin = useCallback(async (accountId: string, oldPin: string, newPin: string) => {
+    const isVerified = await verifyAccountPin(accountId, oldPin);
+
+    if (!isVerified) {
+      return false;
+    }
+
+    await setAccountPin(accountId, newPin);
+    return true;
+  }, []);
+
+  const disablePinLock = useCallback(
+    async (accountId: string, pin: string) => {
+      const isVerified = await verifyAccountPin(accountId, pin);
+
+      if (!isVerified) {
+        return false;
+      }
+
+      await deleteAccountPin(accountId);
+      await updateLocalAccountProfile(accountId, { authMode: 'local_no_auth' });
+      setAccountLockEnabled(false);
+      setIsAccountSessionLocked(false);
+      await persistCurrentState({ accountLockEnabled: false });
+      return true;
+    },
+    [persistCurrentState, updateLocalAccountProfile],
+  );
+
+  const lockSession = useCallback(() => {
+    if (activeAccountId && accountLockEnabled) {
+      setIsAccountSessionLocked(true);
+    }
+  }, [accountLockEnabled, activeAccountId]);
+
+  const unlockSession = useCallback(async (accountId: string, pin: string) => {
+    const isVerified = await verifyAccountPin(accountId, pin);
+
+    if (isVerified) {
+      setIsAccountSessionLocked(false);
+    }
+
+    return isVerified;
+  }, []);
+
+  const importCommonEnvelopeJson = useCallback(
+    async (jsonText: string): Promise<CommonImportApplyResult> => {
+      const parsedImport = parseCommonImportJson(jsonText, activeAccountId);
+
+      if (!parsedImport.isValid || !parsedImport.envelope) {
+        throw new Error(parsedImport.errors.join('\n'));
+      }
+
+      const importedAccount = mapCommonImportAccount(parsedImport.envelope);
+      const importedRecords = mapCommonImportPracticeRecords(parsedImport.envelope);
+      const existingAccount = accounts.find(
+        (account) => account.accountId === importedAccount.accountId,
+      );
+      const nextAccounts = existingAccount
+        ? accounts
+        : sortAccounts([importedAccount, ...accounts]);
+      const mergedRecords = mergeImportedPracticeRecords(records, importedRecords);
+      const nextActiveAccountId = activeAccountId ?? importedAccount.accountId;
+
+      setAccounts(nextAccounts);
+      setRecords(sortRecords(mergedRecords.records));
+      setActiveAccountIdState(nextActiveAccountId);
+      await persistCurrentState({
+        accounts: nextAccounts,
+        records: sortRecords(mergedRecords.records),
+        activeAccountId: nextActiveAccountId,
+      });
+
+      return {
+        accountAdded: !existingAccount,
+        ...mergedRecords.result,
+      };
+    },
+    [accounts, activeAccountId, persistCurrentState, records],
+  );
+
   const addPracticeRecord = useCallback(
     async (recordInput: PracticeRecordInput) => {
       const nextRecord: PracticeRecord = {
         ...recordInput,
+        accountId: recordInput.accountId ?? activeAccountId ?? undefined,
         id: `${Date.now()}`,
         date: new Date().toISOString(),
       };
 
       const nextRecords = sortRecords([nextRecord, ...records]);
+      const nextOutbox =
+        activeAccountId && nextRecord.accountId
+          ? sortCommonOutbox([
+              createCommonOutboxItem({
+                eventType: 'practice_session_completed',
+                accountId: nextRecord.accountId,
+                sourceRecordId: nextRecord.id,
+                occurredAt: nextRecord.date,
+                payload: { practiceMenuName: nextRecord.practiceMenuName },
+              }),
+              ...commonOutbox,
+            ])
+          : commonOutbox;
       setRecords(nextRecords);
-      await persistCurrentState({ records: nextRecords });
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({ records: nextRecords, commonOutbox: nextOutbox });
     },
-    [persistCurrentState, records],
+    [activeAccountId, commonOutbox, persistCurrentState, records],
   );
 
   const updatePracticeRecord = useCallback(
@@ -283,6 +592,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           record.id === id
             ? {
                 ...recordInput,
+                accountId: recordInput.accountId ?? currentRecord.accountId,
                 id,
                 date: currentRecord.date,
               }
@@ -298,20 +608,47 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   const deletePracticeRecord = useCallback(
     async (id: string) => {
+      const targetRecord = records.find((record) => record.id === id);
       const nextRecords = records.filter((record) => record.id !== id);
+      const nextOutbox =
+        (targetRecord?.accountId ?? activeAccountId)
+          ? sortCommonOutbox([
+              createCommonOutboxItem({
+                eventType: 'record_deleted',
+                accountId: targetRecord?.accountId ?? activeAccountId ?? '',
+                sourceRecordId: id,
+                payload: { recordType: 'practice' },
+              }),
+              ...commonOutbox,
+            ])
+          : commonOutbox;
       setRecords(nextRecords);
-      await persistCurrentState({ records: nextRecords });
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({ records: nextRecords, commonOutbox: nextOutbox });
     },
-    [persistCurrentState, records],
+    [activeAccountId, commonOutbox, persistCurrentState, records],
   );
 
   const addConsultHistory = useCallback(
     async (history: ConsultHistory) => {
       const nextHistories = sortConsultHistories([history, ...consultHistories]);
+      const nextOutbox = activeAccountId
+        ? sortCommonOutbox([
+            createCommonOutboxItem({
+              eventType: 'consultation_saved',
+              accountId: activeAccountId,
+              sourceRecordId: history.id,
+              occurredAt: history.date,
+              payload: { category: history.category },
+            }),
+            ...commonOutbox,
+          ])
+        : commonOutbox;
       setConsultHistories(nextHistories);
-      await persistCurrentState({ consultHistories: nextHistories });
+      setCommonOutbox(nextOutbox);
+      await persistCurrentState({ consultHistories: nextHistories, commonOutbox: nextOutbox });
     },
-    [consultHistories, persistCurrentState],
+    [activeAccountId, commonOutbox, consultHistories, persistCurrentState],
   );
 
   const deleteConsultHistory = useCallback(
@@ -419,6 +756,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [profile, records],
   );
 
+  const getActiveAccount = useCallback(
+    () => accounts.find((account) => account.accountId === activeAccountId) ?? null,
+    [accounts, activeAccountId],
+  );
+
   const getConsultHistoryById = useCallback(
     (id: string) => consultHistories.find((history) => history.id === id) ?? null,
     [consultHistories],
@@ -450,6 +792,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       isLoading,
       profile,
       records,
+      accounts,
+      activeAccountId,
+      accountLockEnabled,
+      isAccountSessionLocked,
+      commonOutbox,
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
@@ -463,6 +810,17 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       saveProfileAndDisplaySettings,
       saveUiTheme,
       saveBackgroundTheme,
+      registerLocalAccount,
+      updateLocalAccountProfile,
+      deleteLocalAccountById,
+      setActiveLocalAccount,
+      enablePinLock,
+      verifyPin,
+      changePin,
+      disablePinLock,
+      lockSession,
+      unlockSession,
+      importCommonEnvelopeJson,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -481,6 +839,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
+      getActiveAccount,
       getConsultHistoryById,
       getFormPhotoAdviceResultById,
       getBoardReferenceImageByBoardType,
@@ -489,6 +848,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       isLoading,
       profile,
       records,
+      accounts,
+      activeAccountId,
+      accountLockEnabled,
+      isAccountSessionLocked,
+      commonOutbox,
       favoritePracticeMenuIds,
       practiceFilterState,
       consultHistories,
@@ -502,6 +866,17 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       saveProfileAndDisplaySettings,
       saveUiTheme,
       saveBackgroundTheme,
+      registerLocalAccount,
+      updateLocalAccountProfile,
+      deleteLocalAccountById,
+      setActiveLocalAccount,
+      enablePinLock,
+      verifyPin,
+      changePin,
+      disablePinLock,
+      lockSession,
+      unlockSession,
+      importCommonEnvelopeJson,
       addPracticeRecord,
       updatePracticeRecord,
       deletePracticeRecord,
@@ -520,6 +895,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       getWeeklyPracticeCount,
       getLatestRecord,
       getAnalysisSummary,
+      getActiveAccount,
       getConsultHistoryById,
       getFormPhotoAdviceResultById,
       getBoardReferenceImageByBoardType,
@@ -544,6 +920,8 @@ async function persistAppState(appState: AppState) {
     appStateStorageKey,
     JSON.stringify({
       ...appState,
+      accounts: sortAccounts(appState.accounts),
+      commonOutbox: sortCommonOutbox(appState.commonOutbox),
       records: sortRecords(appState.records),
       consultHistories: sortConsultHistories(appState.consultHistories),
       formPhotoAdviceResults: sortFormPhotoAdviceHistories(appState.formPhotoAdviceResults),
@@ -579,6 +957,18 @@ function sortConsultHistories(histories: ConsultHistory[]) {
 
 function sortBoardReferenceImages(referenceImages: BoardReferenceImage[]) {
   return [...referenceImages].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+function sortAccounts(accounts: LocalAccount[]) {
+  return [...accounts].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+}
+
+function sortCommonOutbox(items: CommonOutboxItem[]) {
+  return [...items].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }

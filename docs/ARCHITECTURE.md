@@ -17,6 +17,7 @@ Expo Router のルート画面を配置します。
 - `app/library*.tsx`: 資料ライブラリ
 - `app/favorites.tsx`: お気に入り練習
 - `app/settings.tsx`: 設定編集
+- `app/account/*.tsx`: ローカルAccount、PIN、Export/Import
 
 ## components/
 
@@ -48,6 +49,10 @@ Expo Router のルート画面を配置します。
 
 保持する主な状態:
 
+- `accounts`
+- `activeAccountId`
+- `accountLockEnabled`
+- `commonOutbox`
 - `profile`
 - `records`
 - `favoritePracticeMenuIds`
@@ -75,6 +80,15 @@ Expo Router のルート画面を配置します。
 - `appStateMigration.ts`: 保存データmigration
 - `validateDataIntegrity.ts`: DB参照整合性チェック
 
+## features/account/
+
+共通Account契約とローカル認証の境界です。
+
+- `accountService.ts`: UUID v4生成、ローカルAccount作成/更新/論理削除、PIN形式検証、CommonEvent生成
+- `pinService.ts`: `expo-secure-store` を使ったPIN保存/確認/削除
+- `commonContractMapper.ts`: Darts共通JSON Export形式への変換、秘密情報除外、Import envelope検証
+- `commonContractImport.ts`: Import JSON preview、Account/練習記録の変換、既存記録とのmerge
+
 ## tests/
 
 Node.js built-in test runner で pure TypeScript ロジックを検証します。
@@ -100,7 +114,11 @@ AsyncStorage key:
 
 ```ts
 {
-  schemaVersion: 9,
+  schemaVersion: 10,
+  accounts: LocalAccount[],
+  activeAccountId: string | null,
+  accountLockEnabled: boolean,
+  commonOutbox: CommonOutboxItem[],
   profile: UserProfile | null,
   records: PracticeRecord[], // photoScore?: PhotoScoreEntry を含む場合あり
   favoritePracticeMenuIds: string[],
@@ -113,9 +131,50 @@ AsyncStorage key:
 }
 ```
 
-## schemaVersion 9
+## schemaVersion 10
 
-現在は相談履歴保存の `consultHistories`、フォーム写真相談結果の `formPhotoAdviceResults`、写真スコア基準画像の `boardReferenceImages`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme`、写真スコア記録用の `PracticeRecord.photoScore` を扱います。
+schemaVersion 10 では、Darts共通Accountデータ契約 v1.0 へ向けて以下を追加しています。
+
+- `LocalAccount`: UUID v4形式の `accountId`、`userName`、`displayName`、任意email、status、authMode
+- `activeAccountId`: 端末内で現在使うAccount
+- `UserProfile.accountId`: OWNERプロフィールとの紐付け
+- `PracticeRecord.accountId`: 新規記録の所有Account。既存記録では未設定を許容
+- `accountLockEnabled`: PINロック設定状態
+- `CommonOutboxItem[]`: 将来同期用のlocal-onlyイベント
+
+PIN値やPIN関連秘密情報は AppState / AsyncStorage / Export JSON には保存しません。
+`pinService.ts` が `expo-secure-store` の `darts_support_account_pin_v1:{accountId}` キーにPINを保存します。
+このPINは端末内ロック用であり、クラウド認証済みとは扱いません。
+
+CommonEvent / Outbox:
+
+- `account_created`
+- `account_profile_updated`
+- `practice_session_completed`
+- `consultation_saved`
+- `record_deleted`
+
+現時点の `syncStatus` は `local_only` です。DartsApp通信、Supabase、クラウド同期、API送信は未実装です。
+
+Common JSON Export / Import:
+
+- Export envelopeは `contractName: darts_common_data`、`contractVersion: 1`、`sourceApp: darts_support_app`
+- `account`、OWNER `profile`、`practice_records`、相談/フォーム写真履歴、お気に入り、filter、outboxを含める
+- PIN、hash、token、secret、SecureStore情報、画像URIは除外
+- ImportはJSON構文、contract、version、UUID v4、payload形状、秘密情報混入を検証する
+- Import preview後、同一record ID同一内容はskip、同一ID別内容はconflict、異なるIDは追加する
+- ImportされたAccountはPINを復元せず `local_no_auth` として扱う
+
+Migration方針:
+
+- schemaVersion 1〜9 は `accounts: []`、`activeAccountId: null`、`accountLockEnabled: false`、`commonOutbox: []` を補完
+- 既存のプロフィール、練習記録、相談履歴、写真スコア、フォーム写真相談、基準画像は維持
+- Account未登録でも既存機能は利用可能
+- migrationは前進・冪等で、壊れたJSONはlegacy/default値へフォールバック
+
+## schemaVersion 9 and earlier
+
+schemaVersion 9までは相談履歴保存の `consultHistories`、フォーム写真相談結果の `formPhotoAdviceResults`、写真スコア基準画像の `boardReferenceImages`、実機表示調整用の `uiTheme`、背景色選択用の `backgroundTheme`、写真スコア記録用の `PracticeRecord.photoScore` を扱います。
 
 初期値:
 
@@ -125,7 +184,7 @@ AsyncStorage key:
 
 Migration方針:
 
-- schemaVersion 1〜8 は `consultHistories: []`、`formPhotoAdviceResults: []`、`boardReferenceImages: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'` を必要に応じて補完
+- schemaVersion 1〜9 は `consultHistories: []`、`formPhotoAdviceResults: []`、`boardReferenceImages: []`、`uiTheme: 'gray'`、`backgroundTheme: 'white'`、Account関連初期値を必要に応じて補完
 - 既存のプロフィール、練習記録、お気に入り、フィルタ条件、相談履歴、フォーム写真相談結果、写真スコア関連データは維持
 - 壊れたJSONはクラッシュさせず、legacy/default値へフォールバック
 - 複雑な破損データ修復はMVP範囲外

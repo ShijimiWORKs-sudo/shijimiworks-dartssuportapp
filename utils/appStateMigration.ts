@@ -2,9 +2,11 @@ import type {
   AppState,
   BackgroundTheme,
   BoardReferenceImage,
+  CommonOutboxItem,
   ConsultHistory,
   FormPhotoAdviceResult,
   LegacyStoredState,
+  LocalAccount,
   PracticeFilterState,
   PracticeRecord,
   UiTheme,
@@ -12,7 +14,7 @@ import type {
 import { defaultBackgroundTheme, defaultUiTheme } from '../constants/theme';
 import { sortFormPhotoAdviceHistories } from './formPhotoAdviceHistory';
 
-export const schemaVersion = 9;
+export const schemaVersion = 10;
 
 export const defaultPracticeFilterState: PracticeFilterState = {
   level: 'all',
@@ -30,6 +32,10 @@ export function migrateAppState(
   if (!parsedState) {
     return {
       schemaVersion,
+      accounts: sortAccounts(legacyState.accounts ?? []),
+      activeAccountId: safeActiveAccountId(legacyState.activeAccountId),
+      accountLockEnabled: legacyState.accountLockEnabled ?? false,
+      commonOutbox: sortCommonOutbox(legacyState.commonOutbox ?? []),
       profile: legacyState.profile,
       records: sortRecords(legacyState.records),
       favoritePracticeMenuIds: legacyState.favoritePracticeMenuIds ?? [],
@@ -46,6 +52,10 @@ export function migrateAppState(
 
   return {
     schemaVersion,
+    accounts: sortAccounts(safeAccounts(parsedState.accounts)),
+    activeAccountId: safeActiveAccountId(parsedState.activeAccountId),
+    accountLockEnabled: parsedState.accountLockEnabled === true,
+    commonOutbox: sortCommonOutbox(safeCommonOutbox(parsedState.commonOutbox)),
     profile: parsedState.profile ?? legacyState.profile,
     records: sortRecords(safeRecords(parsedState.records, legacyState.records)),
     favoritePracticeMenuIds: safeStringArray(parsedState.favoritePracticeMenuIds),
@@ -110,6 +120,18 @@ function safeBoardReferenceImages(value: BoardReferenceImage[] | undefined) {
   return Array.isArray(value) ? value.filter(isBoardReferenceImageLike) : [];
 }
 
+function safeAccounts(value: LocalAccount[] | undefined) {
+  return Array.isArray(value) ? value.filter(isLocalAccountLike) : [];
+}
+
+function safeCommonOutbox(value: CommonOutboxItem[] | undefined) {
+  return Array.isArray(value) ? value.filter(isCommonOutboxItemLike) : [];
+}
+
+function safeActiveAccountId(value: unknown) {
+  return typeof value === 'string' ? value : null;
+}
+
 function safeUiTheme(value: unknown): UiTheme {
   return value === 'light' || value === 'gray' ? value : defaultUiTheme;
 }
@@ -138,6 +160,18 @@ function sortBoardReferenceImages(images: BoardReferenceImage[]) {
   );
 }
 
+function sortAccounts(accounts: LocalAccount[]) {
+  return [...accounts].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+}
+
+function sortCommonOutbox(items: CommonOutboxItem[]) {
+  return [...items].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
 function isBoardReferenceImageLike(value: BoardReferenceImage) {
   return Boolean(
     value &&
@@ -146,5 +180,27 @@ function isBoardReferenceImageLike(value: BoardReferenceImage) {
     typeof value.createdAt === 'string' &&
     value.calibration &&
     value.boardType === value.calibration.boardType,
+  );
+}
+
+function isLocalAccountLike(value: LocalAccount) {
+  return Boolean(
+    value &&
+    value.schemaVersion === 1 &&
+    typeof value.accountId === 'string' &&
+    typeof value.userName === 'string' &&
+    typeof value.displayName === 'string' &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string',
+  );
+}
+
+function isCommonOutboxItemLike(value: CommonOutboxItem) {
+  return Boolean(
+    value &&
+    typeof value.outboxId === 'string' &&
+    typeof value.accountId === 'string' &&
+    typeof value.createdAt === 'string' &&
+    value.eventVersion === 1,
   );
 }

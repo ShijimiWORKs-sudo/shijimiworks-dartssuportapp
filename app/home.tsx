@@ -25,6 +25,7 @@ const menuLinks = [
   { label: 'フォーム写真相談', href: '/consult/form-photo', helper: '3枚写真と自己チェック' },
   { label: '資料ライブラリ', href: '/library', helper: '検索と関連資料' },
   { label: 'お気に入り練習', href: '/favorites', helper: '登録済みメニュー' },
+  { label: 'Account', href: '/account', helper: 'ローカルIDとExport' },
   { label: '設定を編集', href: '/settings', helper: 'RTと悩みを更新' },
 ] as const;
 
@@ -39,6 +40,7 @@ export default function HomeScreen() {
     isFavoritePracticeMenu,
     toggleFavoritePracticeMenu,
     theme,
+    getActiveAccount,
   } = useAppState();
 
   const weeklyPracticeCount = getWeeklyPracticeCount();
@@ -47,6 +49,7 @@ export default function HomeScreen() {
   const recommendation = recommendPracticeMenus(profile, records);
   const recommended = recommendation.todayMenus[0];
   const recommendedMenu = recommended?.menu;
+  const activeAccount = getActiveAccount();
 
   return (
     <ScreenShell>
@@ -69,6 +72,26 @@ export default function HomeScreen() {
           />
           <View style={styles.setupAction}>
             <AppButton label="初期設定へ戻る" onPress={() => router.push('/')} />
+          </View>
+        </Card>
+      ) : null}
+
+      {!activeAccount ? (
+        <Card muted>
+          <SectionTitle
+            title="Account未登録"
+            subtitle="登録しなくても既存機能はそのまま使えます。"
+            tone="card"
+          />
+          <Text style={styles.latestBody}>
+            Accountを登録すると、将来の共通データ契約に使うaccount_idを確保できます。
+          </Text>
+          <View style={styles.setupAction}>
+            <AppButton
+              label="Accountを見る"
+              onPress={() => router.push('/account')}
+              variant="secondary"
+            />
           </View>
         </Card>
       ) : null}

@@ -18,6 +18,9 @@ MVP v0.1 では実データ連携やAI連携は行わず、端末内ローカル
 - 資料ライブラリ: 知識記事の検索、カテゴリ/タグ絞り込み
 - お気に入り: よく使う練習メニューの保存
 - 表示設定: 白/グレー系テーマと背景色の切り替え
+- ローカルAccount: UUID v4形式の共通 `account_id`、activeAccountId、OWNERプロフィール紐付け
+- Accountセキュリティ: 4〜8桁PINロック、PIN設定/変更/解除/確認
+- 共通JSON: Export / Importプレビュー、将来同期用CommonEvent / Outbox
 
 ## 技術スタック
 
@@ -27,6 +30,7 @@ MVP v0.1 では実データ連携やAI連携は行わず、端末内ローカル
 - Expo Router
 - React Context
 - AsyncStorage
+- SecureStore
 - Node.js built-in test runner
 - ESLint / Prettier
 
@@ -120,6 +124,23 @@ Apple Developer Program未加入の場合、iOS配布ビルド、証明書作成
 
 v0.1.0時点ではログイン、クラウド同期、AI API連携、公式API連携はなく、入力データは端末内AsyncStorageに保存されます。外部送信は行っていません。
 
+## Local Account and common data contract
+
+DartsSupportApp単体で使えるローカルAccountを追加しています。
+
+- Account登録は任意です。未登録でも既存の練習記録、分析、相談、写真スコア機能は利用できます。
+- 登録時に UUID v4 形式の共通 `account_id` を生成します。
+- `activeAccountId` は端末内の現在選択Accountを示します。
+- 既存OWNERプロフィールは、Account登録時に `profile.accountId` として紐付けます。
+- 新規練習記録には、activeAccountId がある場合のみ `record.accountId` を保存します。既存記録は `accountId` なしでも互換表示します。
+- PINは端末内ロック用です。クラウド認証や本人確認ではありません。
+- PIN値やPIN関連秘密情報は AsyncStorage、AppState、Export JSON へ保存せず、`expo-secure-store` に保存します。
+- 共通JSON Exportは、PIN、hash、token、secret、SecureStore情報、画像URIを除外します。
+- 共通JSON Importは、不正JSONや契約違反を検証し、preview後に練習記録を追加します。同一ID同一内容はskip、同一ID別内容はconflictとして既存データを優先します。
+- CommonEvent / Outbox は `local_only` として端末内に保存し、将来同期のための下準備に留めています。
+
+この段階ではDartsAppとの通信、Supabase、クラウド同期、Apple Login、Google Login、メール認証、API通信は実装していません。
+
 写真スコア記録MVPでは、画像そのものの永続保存は必須にしていません。練習記録には、ボードキャリブレーション、タップ座標、判定結果、候補由来、信頼度、合計スコアなどを保存します。
 
 空のボード写真を基準画像として登録できます。写真スコア記録時に基準画像と現在画像のキャリブレーション差を評価し、中心ズレ、外周半径差、20方向の角度差を警告します。現時点ではExpo Goで動く範囲を優先しているため、実ピクセル差分による完全なダーツ検出は未実装で、単一画像候補βまたはキャリブレーション候補へフォールバックします。
@@ -176,7 +197,7 @@ npm run validate:data
 - DARTSLIVE / PHOENIX 公式API連携
 - AI API連携
 - クラウド同期
-- ログイン
+- クラウドログイン
 - 外部グラフライブラリ
 - 本番向けデータバックアップ
 
