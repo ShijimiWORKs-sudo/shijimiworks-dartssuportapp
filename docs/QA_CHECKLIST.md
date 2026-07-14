@@ -30,7 +30,33 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 - [ ] 分析サマリーが表示される
 - [ ] 主要メニューから各画面へ遷移できる
 - [ ] ホームの主要メニューから写真スコア記録へ進める
+- [ ] ホームの主要メニューからAccountへ進める
+- [ ] Account未登録でもホーム、記録、分析、相談が使える
 - [ ] プロフィール未設定時に初期設定導線が表示される
+
+## Account / PIN / 共通JSON
+
+- [ ] `/account` が表示される
+- [ ] Account未登録時に登録導線が表示される
+- [ ] ローカルAccountを登録できる
+- [ ] 登録後に `account_id` がUUID v4形式で表示される
+- [ ] Account登録時に既存OWNERプロフィールへ `accountId` が紐付く
+- [ ] Accountプロフィールを編集できる
+- [ ] Accountを論理削除でき、練習記録は消えない
+- [ ] PINを4〜8桁で設定できる
+- [ ] PIN変更ができる
+- [ ] PIN解除ができる
+- [ ] PINロック後にPIN確認で解除できる
+- [ ] PINやPIN関連秘密情報が画面やExport JSONに表示されない
+- [ ] Account登録後の新規練習記録に `accountId` が保存される
+- [ ] Account登録前の既存記録も表示・編集できる
+- [ ] JSON Exportを生成できる
+- [ ] Export JSONにPIN、hash、token、secret、SecureStore情報、画像URIが含まれない
+- [ ] JSON Importでpreviewが表示される
+- [ ] 不正JSONをImportしても既存データが壊れない
+- [ ] 同一ID同一内容の記録はskipされる
+- [ ] 同一ID別内容の記録はconflict扱いで既存データが優先される
+- [ ] ImportされたAccountはPINなしとして扱われる
 
 ## 練習メニュー
 
@@ -203,7 +229,7 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 
 ## Migration
 
-- [ ] schemaVersion 1〜8 相当の既存データで起動してもクラッシュしない
+- [ ] schemaVersion 1〜9 相当の既存データで起動してもクラッシュしない
 - [ ] 既存のプロフィールが残る
 - [ ] 既存の練習記録が残る
 - [ ] お気に入りとフィルタ条件が残る
@@ -214,6 +240,11 @@ iPhone + Expo Go での MVP v0.1 確認用チェックリストです。
 - [ ] `backgroundTheme` が `white` で補完される
 - [ ] 写真スコア関連データがある記録でも消えない
 - [ ] 既存の基準画像データが消えない
+- [ ] `accounts` が空配列で補完される
+- [ ] `activeAccountId` が `null` で補完される
+- [ ] `accountLockEnabled` が `false` で補完される
+- [ ] `commonOutbox` が空配列で補完される
+- [ ] migrationを再実行してもAccountやOutboxが重複しない
 
 ## Theme and Navigation
 

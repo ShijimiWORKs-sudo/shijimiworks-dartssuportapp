@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import type { CommonOutboxItem, LocalAccount } from '../types';
 import { defaultPracticeFilterState, migrateAppState } from '../utils/appStateMigration';
 import { createConsultHistory } from '../utils/createConsultHistory';
 import { validateDataIntegrity } from '../utils/validateDataIntegrity';
@@ -13,7 +14,7 @@ test('validateDataIntegrity passes for bundled constants', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 9', () => {
+test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 10', () => {
   const profile = buildProfile();
   const record = buildRecord();
   const migrated = migrateAppState(
@@ -28,7 +29,11 @@ test('migrateAppState upgrades schemaVersion 1 data to schemaVersion 9', () => {
     },
   );
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
+  assert.deepEqual(migrated.accounts, []);
+  assert.equal(migrated.activeAccountId, null);
+  assert.equal(migrated.accountLockEnabled, false);
+  assert.deepEqual(migrated.commonOutbox, []);
   assert.deepEqual(migrated.favoritePracticeMenuIds, []);
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);
   assert.deepEqual(migrated.consultHistories, []);
@@ -63,7 +68,11 @@ test('migrateAppState upgrades schemaVersion 2 data and preserves existing field
     },
   );
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
+  assert.deepEqual(migrated.accounts, []);
+  assert.equal(migrated.activeAccountId, null);
+  assert.equal(migrated.accountLockEnabled, false);
+  assert.deepEqual(migrated.commonOutbox, []);
   assert.deepEqual(migrated.favoritePracticeMenuIds, ['beginner-bull-count-up-12']);
   assert.equal(migrated.practiceFilterState.level, 'beginner');
   assert.equal(migrated.practiceFilterState.machineType, 'PHOENIX');
@@ -94,7 +103,7 @@ test('migrateAppState upgrades schemaVersion 3 data and adds gray theme', () => 
     },
   );
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
   assert.equal(migrated.uiTheme, 'gray');
   assert.equal(migrated.backgroundTheme, 'white');
   assert.deepEqual(migrated.profile, profile);
@@ -144,7 +153,7 @@ test('migrateAppState upgrades schemaVersion 6 data and preserves photo score fi
 
   const migratedRecord = migrated.records[0] as typeof record;
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
   assert.equal(migrated.backgroundTheme, 'purple');
   assert.equal(migratedRecord.inputMethod, 'photoTap');
   assert.equal(migratedRecord.photoScore.totalScore, 60);
@@ -190,7 +199,7 @@ test('migrateAppState upgrades schemaVersion 7 data and preserves form photo adv
     },
   );
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
   assert.equal(migrated.formPhotoAdviceResults[0]?.id, 'form-photo-1');
   assert.equal(migrated.records.length, 1);
   assert.deepEqual(migrated.boardReferenceImages, []);
@@ -232,10 +241,69 @@ test('migrateAppState upgrades schemaVersion 8 data and preserves board referenc
     },
   );
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
   assert.equal(migrated.boardReferenceImages[0]?.id, 'reference-1');
   assert.equal(migrated.boardReferenceImages[0]?.calibration.boardType, 'DARTSLIVE_ZERO');
   assert.equal(migrated.records.length, 1);
+});
+
+test('migrateAppState upgrades schemaVersion 9 data and preserves account contract fields', () => {
+  const account: LocalAccount = {
+    schemaVersion: 1,
+    accountId: '123e4567-e89b-42d3-a456-426614174000',
+    userName: 'owner',
+    displayName: 'Owner',
+    email: null,
+    accountStatus: 'local_active',
+    authMode: 'local_no_auth',
+    cloudAuthSubject: null,
+    createdAt: '2026-07-10T00:00:00.000Z',
+    updatedAt: '2026-07-10T00:00:00.000Z',
+    deletedAt: null,
+  };
+  const outboxItem: CommonOutboxItem = {
+    outboxId: '223e4567-e89b-42d3-a456-426614174000',
+    eventType: 'account_created',
+    eventVersion: 1,
+    accountId: account.accountId,
+    sourceRecordId: null,
+    occurredAt: '2026-07-10T00:00:00.000Z',
+    createdAt: '2026-07-10T00:00:00.000Z',
+    syncStatus: 'local_only',
+    payload: {},
+  };
+  const profile = { ...buildProfile(), accountId: account.accountId };
+  const record = buildRecord({ accountId: account.accountId });
+  const migrated = migrateAppState(
+    JSON.stringify({
+      schemaVersion: 9,
+      accounts: [account],
+      activeAccountId: account.accountId,
+      accountLockEnabled: true,
+      commonOutbox: [outboxItem],
+      profile,
+      records: [record],
+      favoritePracticeMenuIds: [],
+      practiceFilterState: defaultPracticeFilterState,
+      consultHistories: [],
+      formPhotoAdviceResults: [],
+      boardReferenceImages: [],
+      uiTheme: 'gray',
+      backgroundTheme: 'white',
+    }),
+    {
+      profile: null,
+      records: [],
+    },
+  );
+
+  assert.equal(migrated.schemaVersion, 10);
+  assert.equal(migrated.accounts[0]?.accountId, account.accountId);
+  assert.equal(migrated.activeAccountId, account.accountId);
+  assert.equal(migrated.accountLockEnabled, true);
+  assert.equal(migrated.commonOutbox[0]?.outboxId, outboxItem.outboxId);
+  assert.equal(migrated.profile?.accountId, account.accountId);
+  assert.equal(migrated.records[0]?.accountId, account.accountId);
 });
 
 test('migrateAppState falls back for broken stored data without crashing', () => {
@@ -246,7 +314,11 @@ test('migrateAppState falls back for broken stored data without crashing', () =>
     records: [legacyRecord],
   });
 
-  assert.equal(migrated.schemaVersion, 9);
+  assert.equal(migrated.schemaVersion, 10);
+  assert.deepEqual(migrated.accounts, []);
+  assert.equal(migrated.activeAccountId, null);
+  assert.equal(migrated.accountLockEnabled, false);
+  assert.deepEqual(migrated.commonOutbox, []);
   assert.deepEqual(migrated.profile, legacyProfile);
   assert.equal(migrated.records[0]?.id, 'legacy');
   assert.deepEqual(migrated.practiceFilterState, defaultPracticeFilterState);

@@ -16,6 +16,35 @@ DartsSupportApp MVP v0.1 で確認できる機能一覧です。
 - 主な悩みの複数選択
 - 設定再編集
 
+## ローカルAccount
+
+- UUID v4形式の共通 `account_id` 生成
+- Account登録は任意。未登録でも既存機能を利用可能
+- `activeAccountId` による端末内の現在Account管理
+- OWNERプロフィールとの `accountId` 紐付け
+- Accountプロフィール編集
+- Account論理削除
+- 新規練習記録への `accountId` 保存
+- 既存練習記録は `accountId` 未設定でも互換表示
+
+## Accountセキュリティ
+
+- 4〜8桁のPIN設定
+- PIN変更
+- PIN解除
+- PIN確認によるロック解除
+- PINはSecureStore保存
+- PINやPIN関連秘密情報はAsyncStorage、AppState、Export JSONへ保存しない
+
+## 共通JSON / 将来同期準備
+
+- Darts共通データ契約 v1.0 のExport
+- Import JSON検証
+- Import preview
+- 同一記録のskip / conflict扱い
+- PIN、hash、token、secret、画像URIのExport除外
+- CommonEvent / Outboxのlocal-only保存
+
 ## 練習メニュー
 
 - 24件の練習メニューDB
